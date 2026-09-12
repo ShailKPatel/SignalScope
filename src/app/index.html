@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SignalScope - Media Authenticity & AI Detection Suite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="brand">
+      <div class="logo-icon">S</div>
+      <div>
+        <div class="brand-title">SignalScope</div>
+        <span class="brand-badge">SIH 2026 Forensic Engine</span>
+      </div>
+    </div>
+    <div class="nav-links">
+      <div class="nav-badge">Core Task + Modules A-G</div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container">
+    
+    <!-- Upload Section -->
+    <div class="upload-card" id="dropZone">
+      <div class="upload-icon">🔍</div>
+      <h2 class="upload-title">Drop Images or Select Folder to Analyze</h2>
+      <p class="upload-subtitle">Supports single images, bulk upload, or complete image folders (JPG, PNG, WebP)</p>
+      
+      <div class="upload-actions">
+        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+          📁 Select Files
+        </button>
+        <button class="btn btn-secondary" onclick="document.getElementById('folderInput').click()">
+          📂 Select Folder
+        </button>
+      </div>
+
+      <input type="file" id="fileInput" multiple accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+      <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;" onchange="handleFileSelect(event)">
+
+      <div class="caption-input-box">
+        <input type="text" id="captionInput" class="caption-input" placeholder="Optional text caption / claim (for Module E multimodal check)...">
+      </div>
+    </div>
+
+    <!-- Results Display Grid (Hidden by default until analysis) -->
+    <div class="results-grid" id="resultsGrid" style="display: none;">
+      
+      <!-- Left Column: Image & Heatmap Viewer (Module A) -->
+      <div class="viewer-card">
+        <div class="verdict-banner" id="verdictBanner">
+          <div>
+            <div class="verdict-title" id="verdictLabel">Likely AI-Generated</div>
+            <div style="font-size: 0.8rem; opacity: 0.8;" id="verdictSubtitle">Confidence likelihood assessment</div>
+          </div>
+          <div class="verdict-score" id="verdictScore">88.5%</div>
+        </div>
+
+        <div class="image-container">
+          <img id="baseImage" class="base-img" src="" alt="Analyzed Image">
+          <img id="heatmapImage" class="heatmap-img" src="" alt="Grad-CAM Heatmap Overlay">
+        </div>
+
+        <div class="controls-bar">
+          <div class="slider-group">
+            <label for="opacitySlider">Heatmap Overlay</label>
+            <input type="range" id="opacitySlider" min="0" max="100" value="60" oninput="updateHeatmapOpacity(this.value)">
+          </div>
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="imageResolution">512x512</span>
+        </div>
+      </div>
+
+      <!-- Right Column: Interactive Bonus Modules Tabs -->
+      <div class="modules-card">
+        <div class="tabs-header">
+          <button class="tab-btn active" onclick="switchTab('tab-a', this)">Module A (Visual Cues)</button>
+          <button class="tab-btn" onclick="switchTab('tab-b', this)">Module B (Attribution)</button>
+          <button class="tab-btn" onclick="switchTab('tab-c', this)">Module C (Robustness)</button>
+          <button class="tab-btn" onclick="switchTab('tab-d', this)">Module D (Metadata)</button>
+          <button class="tab-btn" onclick="switchTab('tab-e', this)">Module E (Multimodal)</button>
+          <button class="tab-btn" onclick="switchTab('tab-g', this)">Module G (Defense)</button>
+        </div>
+
+        <!-- Tab A: Module A Explainability -->
+        <div id="tab-a" class="tab-content active">
+          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Headline Visual Cue Explanations</h3>
+          <p id="explanationSummary" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+          <div id="visualCuesContainer"></div>
+        </div>
+
+        <!-- Tab B: Module B Attribution -->
+        <div id="tab-b" class="tab-content">
+          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Generator Family Attribution</h3>
+          <div class="metric-row">
+            <span class="metric-label">Predicted Family</span>
+            <span class="metric-val" id="attrFamily">-</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Likely Model Architecture</span>
+            <span class="metric-val" id="attrModel">-</span>
+          </div>
+          <div style="margin-top: 1rem;">
+            <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Family Probability Breakdown</h4>
+            <div id="familyProbContainer"></div>
+          </div>
+        </div>
+
+        <!-- Tab C: Module C Robustness -->
+        <div id="tab-c" class="tab-content">
+          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Robustness to Image Degradation</h3>
+          <div class="metric-row">
+            <span class="metric-label">Overall Stability Rating</span>
+            <span class="metric-val" id="robustnessRating">-</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Stable Under JPEG Q70 Compression</span>
+            <span class="metric-val" id="robustnessJpeg">-</span>
+          </div>
+          <div style="margin-top: 1rem;">
+            <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">JPEG Compression Degradation Curve</h4>
+            <div id="jpegCurveContainer"></div>
+          </div>
+        </div>
+
+        <!-- Tab D: Module D Metadata -->
+        <div id="tab-d" class="tab-content">
+          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Provenance & Metadata Analysis</h3>
+          <div class="metric-row">
+            <span class="metric-label">EXIF Metadata Present</span>
+            <span class="metric-val" id="metaHasExif">-</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">C2PA Signed Manifest</span>
+            <span class="metric-val" id="metaHasC2pa">-</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Camera Make & Model</span>
+            <span class="metric-val" id="metaCamera">-</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Provenance Integrity Assessment</span>
+            <span class="metric-val" id="metaAssessment" style="font-size: 0.8rem;">-</span>
+          </div>
+        </div>
+
+        <!-- Tab E: Module E Multimodal -->
+        <div id="tab-e" class="tab-content">
+          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Multimodal Text-Image Alignment</h3>
+          <div class="metric-row">
+            <span class="metric-label">Provided Caption</span>
+            <span class="metric-val" id="multiCaption">-</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">CLIP Semantic Match Score</span>
+            <span class="metric-val" id="multiScore">-</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Consistency Assessment</span>
+            <span class="metric-val" id="multiAssessment">-</span>
+          </div>
+        </div>
+
+        <!-- Tab G: Module G Active Defence -->
+        <div id="tab-g" class="tab-content">
+          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Active Defence & Adversarial Vulnerability</h3>
+          <div id="activeDefenseContainer"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Batch Results Queue (Hidden until multi-file upload) -->
+    <div class="batch-section" id="batchSection" style="display: none;">
+      <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Batch Scan Results</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted);" id="batchSummary">Summary: 0 files analyzed</p>
+      
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Verdict</th>
+            <th>Confidence</th>
+            <th>Attribution</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="batchTableBody">
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <footer class="footer">
+    SignalScope &copy; 2026 | SIH Internal Hackathon | L. J. Institute of Engineering & Technology [C-433]
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
