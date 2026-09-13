@@ -1,0 +1,42 @@
+# SignalScope Retraining Configuration
+
+dataset:
+  target_total_images: 100000
+  split_ratio:
+    train: 0.80
+    val: 0.10
+    test: 0.10
+  classes:
+    - real
+    - synthetic
+  generators:
+    - stable_diffusion_v1_5
+    - sdxl
+    - midjourney_v6
+    - flux_1
+    - stylegan3
+  image_size: 224
+  num_workers: 4
+
+model:
+  spatial_backbone: "resnet34"  # Options: resnet18, resnet34, resnet50, efficientnet_b0
+  frequency_stream: true
+  num_classes: 1  # Binary classification: Real (0) vs Synthetic (1)
+  dropout_rate: 0.3
+
+training:
+  epochs: 10
+  batch_size: 32
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  loss_function: "bce_with_logits"
+  optimizer: "adamw"
+  lr_scheduler: "cosine"
+  device: "auto"  # auto, cuda, or cpu
+  seed: 42
+
+paths:
+  data_dir: "retrain/data"
+  checkpoint_dir: "retrain/checkpoints"
+  best_model_name: "best_model.pt"
+  manifest_path: "retrain/data/manifest.json"

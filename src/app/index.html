@@ -3,204 +3,602 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SignalScope - Media Authenticity & AI Detection Suite</title>
+  <title>TAKNIKI VIBHAD - Media Authenticity & Misinformation Prevention Suite | SIH 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
 
-  <!-- Navigation Bar -->
-  <nav class="navbar">
-    <div class="brand">
-      <div class="logo-icon">S</div>
-      <div>
-        <div class="brand-title">SignalScope</div>
-        <span class="brand-badge">SIH 2026 Forensic Engine</span>
+  <!-- 1. Dual-Language Advisory Modal Pop-up -->
+  <div class="gov-modal-overlay" id="advisoryModal">
+    <div class="gov-modal-box">
+      <div class="gov-modal-header">
+        <div class="gov-modal-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <span id="txtModalTitle">IMPORTANT PUBLIC ADVISORY / मुख्य सार्वजनिक परामर्श</span>
+        </div>
+        <button class="gov-modal-close" onclick="closeModal()" title="Close">&times;</button>
+      </div>
+      <div class="gov-modal-body">
+        <!-- English Advisory Block -->
+        <div class="lang-block-en">
+          <p style="font-weight: 800; color: var(--gov-navy); margin-bottom: 0.35rem;" id="txtModalTitleEng">
+            SIH 2026 Media Authenticity & Misinformation Prevention Portal
+          </p>
+          <p style="color: var(--text-medium); font-size: 0.85rem;" id="txtModalDescEng">
+            Welcome to SignalScope by Team Takniki Vibhad. This platform analyzes submitted imagery using neural forensic classification and Grad-CAM visual anomaly localization to evaluate synthetic media likelihood under SIH 2026 Problem Statement C-433.
+          </p>
+        </div>
+        <!-- Hindi Advisory Block -->
+        <div class="lang-block-hi">
+          <p style="font-weight: 800; color: #78350F; margin-bottom: 0.35rem;" id="txtModalTitleHin">
+            एसआईएच 2026 मीडिया प्रामाणिकता एवं भ्रामक सूचना रोकथाम पोर्टल
+          </p>
+          <p style="color: #92400E; font-size: 0.85rem;" id="txtModalDescHin">
+            टीम तकनीकी विभाग के सिग्नलस्कोप पोर्टल में आपका स्वागत है। यह मंच एसआईएच 2026 समस्या कथन C-433 के तहत सिंथेटिक मीडिया और डीपफेक छवियों की संभावना का मूल्यांकन करने के लिए फॉरेंसिक विश्लेषण प्रदान करता है।
+          </p>
+        </div>
+      </div>
+      <div class="gov-modal-footer">
+        <button class="btn-gov-primary" onclick="closeModal()" id="txtBtnModalClose">PROCEED TO PORTAL / पोर्टल पर आगे बढ़ें</button>
       </div>
     </div>
-    <div class="nav-links">
-      <div class="nav-badge">Core Task + Modules A-G</div>
+  </div>
+
+  <!-- 2. National Tricolor Strip -->
+  <div class="gov-tricolor-strip"></div>
+
+  <!-- 3. Top Accessibility & Language Utility Bar -->
+  <div class="gov-top-utility">
+    <div class="utility-inner">
+      <div>
+        <a href="#mainContent" class="skip-link" id="txtSkipLink">Skip to main content</a>
+        <span style="opacity: 0.5; margin: 0 8px;">|</span>
+        <span id="txtGovSubTitleTop">SignalScope Media Forensics & Authenticity Engine</span>
+      </div>
+      <div class="utility-tools">
+        <div class="access-group">
+          <span style="font-weight: 600; margin-right: 4px;" id="txtTextSizeLabel">Text Size:</span>
+          <button class="access-btn" onclick="adjustFontSize(-1)" title="Decrease Text Size">A-</button>
+          <button class="access-btn" onclick="adjustFontSize(0)" title="Reset Text Size">A</button>
+          <button class="access-btn" onclick="adjustFontSize(1)" title="Increase Text Size">A+</button>
+        </div>
+        <div class="access-group">
+          <button class="access-btn" onclick="toggleContrast()" id="btnContrast">High Contrast</button>
+        </div>
+        <div class="lang-toggle-box">
+          <button class="lang-toggle-btn active" id="btnLangEN" onclick="setLanguage('en')">English</button>
+          <button class="lang-toggle-btn" id="btnLangHI" onclick="setLanguage('hi')">हिन्दी</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Header Section -->
+  <header class="gov-header">
+    <div class="header-inner">
+      <div class="emblem-box">
+        <div class="emblem-text">
+          <span class="govt-title" id="txtGovtOfIndia">SIGNALSCOPE FORENSIC ENGINE</span>
+          <h1 class="portal-title" id="txtMainPortalTitle">SIGNAL SCOPE</h1>
+          <span class="directorate-title" id="txtDirectorate">Media Verification & Authenticity Platform</span>
+        </div>
+      </div>
+  </header>
+
+  <!-- 5. Navigation Menu Bar -->
+  <nav class="gov-nav-menu">
+    <div class="menu-inner">
+      <button class="menu-item active" id="btnMenuSingle" onclick="switchMode('single')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+        <span id="txtMenuSingle">Single Image Submission Desk</span>
+      </button>
+      <button class="menu-item" id="btnMenuFolder" onclick="switchMode('folder')">
+        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+        <span id="txtMenuFolder">Directory Batch Audit Desk</span>
+      </button>
+      <button class="menu-item" id="btnMenuTeam" onclick="switchMode('team')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 1-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span id="txtMenuTeam">Team Directorate Members (6)</span>
+      </button>
+      <button class="menu-item" id="btnMenuAbout" onclick="switchMode('about')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <span id="txtMenuDirectives">Technical Methodology</span>
+      </button>
     </div>
   </nav>
 
-  <!-- Main Container -->
-  <div class="container">
+  <!-- 6. Public Announcement Ticker Bar -->
+  <div class="gov-ticker">
+    <div class="ticker-inner">
+      <span class="ticker-label" id="txtTickerLabel">PUBLIC INTEREST</span>
+      <span id="txtTickerText">Independent media analysis desk created to counter AI-generated synthetic media, deepfakes, and fake news. Evaluation standard: Calibrated Likelihood Assessment.</span>
+    </div>
+  </div>
+
+  <!-- 7. Main Portal Container -->
+  <main class="gov-container" id="mainContent">
     
-    <!-- Upload Section -->
-    <div class="upload-card" id="dropZone">
-      <div class="upload-icon">🔍</div>
-      <h2 class="upload-title">Drop Images or Select Folder to Analyze</h2>
-      <p class="upload-subtitle">Supports single images, bulk upload, or complete image folders (JPG, PNG, WebP)</p>
-      
-      <div class="upload-actions">
-        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-          📁 Select Files
-        </button>
-        <button class="btn btn-secondary" onclick="document.getElementById('folderInput').click()">
-          📂 Select Folder
-        </button>
+    <!-- UIDAI / IRCTC Quick Service Tiles Grid -->
+    <div class="service-tiles-section">
+      <div class="section-label-bar">
+        <span class="section-heading-txt" id="txtServiceGridTitle">Forensic Verification Desks & Services</span>
       </div>
-
-      <input type="file" id="fileInput" multiple accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
-      <input type="file" id="folderInput" webkitdirectory directory multiple style="display: none;" onchange="handleFileSelect(event)">
-
-      <div class="caption-input-box">
-        <input type="text" id="captionInput" class="caption-input" placeholder="Optional text caption / claim (for Module E multimodal check)...">
+      <div class="service-grid">
+        <div class="tile-card" onclick="switchMode('single')">
+          <div class="tile-title" id="txtTile1Title">Single Artifact Inspection</div>
+          <div class="tile-desc" id="txtTile1Desc">Neural classification & visual Grad-CAM heatmap localization desk.</div>
+        </div>
+        <div class="tile-card" onclick="switchMode('folder')">
+          <div class="tile-title" id="txtTile2Title">Directory Batch Audit</div>
+          <div class="tile-desc" id="txtTile2Desc">High-throughput bulk image scanning for departmental compliance.</div>
+        </div>
+        <div class="tile-card" onclick="switchMode('single')">
+          <div class="tile-title" id="txtTile3Title">Architecture Attribution</div>
+          <div class="tile-desc" id="txtTile3Desc">Identify Diffusion, GAN, or Transformer generator origins (Module B).</div>
+        </div>
+        <div class="tile-card" onclick="switchMode('single')">
+          <div class="tile-title" id="txtTile4Title">Multimodal Claim Check</div>
+          <div class="tile-desc" id="txtTile4Desc">CLIP semantic alignment for checking image-caption claim consistency (Module E).</div>
+        </div>
       </div>
     </div>
 
-    <!-- Results Display Grid (Hidden by default until analysis) -->
-    <div class="results-grid" id="resultsGrid" style="display: none;">
-      
-      <!-- Left Column: Image & Heatmap Viewer (Module A) -->
-      <div class="viewer-card">
-        <div class="verdict-banner" id="verdictBanner">
-          <div>
-            <div class="verdict-title" id="verdictLabel">Likely AI-Generated</div>
-            <div style="font-size: 0.8rem; opacity: 0.8;" id="verdictSubtitle">Confidence likelihood assessment</div>
-          </div>
-          <div class="verdict-score" id="verdictScore">88.5%</div>
+    <div class="breadcrumb-bar">
+      <a href="#" id="txtBreadcrumbHome">Home</a> &gt; <span id="txtBreadcrumbCurrent">Single Artifact Submission Desk</span>
+    </div>
+
+    <!-- Mode 1: Single Image Submission Desk -->
+    <div class="gov-card" id="dropZoneSingle">
+      <div class="gov-card-header">
+        <h2 class="gov-card-title" id="txtCardTitleSingle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          Single Artifact Submission Desk
+        </h2>
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--gov-navy);" id="txtAckSingle">Ref: SIG-2026-DESK-A</span>
+      </div>
+      <div class="gov-card-body">
+        
+        <div class="gov-dropzone">
+          <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <h3 class="dropzone-title" id="txtDropTitleSingle">Select or Drag Image File for Forensic Testing</h3>
+          <p class="dropzone-sub" id="txtDropSubSingle">Upload single image artifact (JPEG, PNG, WebP) to perform neural classification, Grad-CAM visual anomaly localization, generator architecture attribution, and metadata provenance evaluation.</p>
+          
+          <button class="btn-gov-primary" onclick="document.getElementById('fileInputSingle').click()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span id="txtBtnChooseSingle">Choose Image File</span>
+          </button>
+          
+          <input type="file" id="fileInputSingle" accept="image/*" style="display: none;" onchange="handleSingleFileSelect(event)">
         </div>
 
-        <div class="image-container">
-          <img id="baseImage" class="base-img" src="" alt="Analyzed Image">
+        <!-- Caption Field (ONLY VISIBLE ON SINGLE FILE DESK) -->
+        <div class="gov-input-group" id="captionContainer">
+          <label for="captionInput" class="gov-input-label" id="txtCaptionLabel">Multimodal Claim Verification (Module E)</label>
+          <input type="text" id="captionInput" class="gov-input-text" placeholder="Enter associated text caption, claim statement, or news context to verify CLIP semantic match...">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mode 2: Folder Directory Audit Desk (Hidden by Default) -->
+    <div class="gov-card" id="dropZoneFolder" style="display: none;">
+      <div class="gov-card-header">
+        <h2 class="gov-card-title" id="txtCardTitleFolder">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          Directory Batch Audit Desk
+        </h2>
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--gov-navy);" id="txtAckFolder">Ref: SIG-2026-AUDIT-B</span>
+      </div>
+      <div class="gov-card-body">
+        
+        <div class="gov-dropzone">
+          <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            <line x1="12" y1="11" x2="12" y2="17"></line>
+            <line x1="9" y1="14" x2="15" y2="14"></line>
+          </svg>
+          <h3 class="dropzone-title" id="txtDropTitleFolder">Select Directory Folder for High-Throughput Audit</h3>
+          <p class="dropzone-sub" id="txtDropSubFolder">Submit complete image directories for automated high-throughput media verification, batch threat statistics, and departmental compliance reporting.</p>
+          
+          <button class="btn-gov-primary" onclick="document.getElementById('folderInputDirectory').click()">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <span id="txtBtnChooseFolder">Choose Image Directory</span>
+          </button>
+          
+          <input type="file" id="folderInputDirectory" webkitdirectory directory multiple style="display: none;" onchange="handleFolderSelect(event)">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mode 3: Dedicated 6 Team Directorate Members Section (Hidden by Default) -->
+    <div class="team-section-gov" id="teamSection" style="display: none;">
+      <div class="team-header-banner-gov">
+        <div>
+          <h2 class="team-title-gov" id="txtTeamSectionTitle">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 1-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            Team Directorate & Project Contributors (Takniki Vibhad)
+          </h2>
+          <span class="team-sub-gov" id="txtTeamSectionSub">SIH 2026 • Problem Statement C-433</span>
+        </div>
+        <span class="directorate-seal-badge">OFFICIAL RECORD / आधिकारिक रिकॉर्ड</span>
+      </div>
+
+      <div class="team-grid-6">
+        
+        <!-- Member 1 -->
+        <div class="team-member-card-gov">
+          <div class="card-gov-header-bar">
+            <span>OFFICER PROFILE</span>
+            <span class="member-badge-tag" id="txtM1Badge">Lead Contributor</span>
+          </div>
+          <div class="card-gov-body">
+            <img src="/static/assets/team/member1.jpg" alt="Shri A. Sharma" class="member-avatar-gov">
+            <div class="member-details-gov">
+              <h3 class="member-name-gov" id="txtM1Name">Shri A. Sharma</h3>
+              <span class="member-designation-gov" id="txtM1Desig">Team Leader & System Architect</span>
+              <p class="member-responsibility-gov" id="txtM1Role">Overall project coordination, core architecture design, and SIH 2026 pipeline deployment.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member 2 -->
+        <div class="team-member-card-gov">
+          <div class="card-gov-header-bar">
+            <span>OFFICER PROFILE</span>
+            <span class="member-badge-tag" id="txtM2Badge">AI Core</span>
+          </div>
+          <div class="card-gov-body">
+            <img src="/static/assets/team/member2.jpg" alt="Dr. P. Verma" class="member-avatar-gov">
+            <div class="member-details-gov">
+              <h3 class="member-name-gov" id="txtM2Name">Dr. P. Verma</h3>
+              <span class="member-designation-gov" id="txtM2Desig">Principal AI Research Lead</span>
+              <p class="member-responsibility-gov" id="txtM2Role">Neural network training, generalisation splits, and frequency domain artifact extraction.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member 3 -->
+        <div class="team-member-card-gov">
+          <div class="card-gov-header-bar">
+            <span>OFFICER PROFILE</span>
+            <span class="member-badge-tag" id="txtM3Badge">Module A Lead</span>
+          </div>
+          <div class="card-gov-body">
+            <img src="/static/assets/team/member3.jpg" alt="Shri R. Patel" class="member-avatar-gov">
+            <div class="member-details-gov">
+              <h3 class="member-name-gov" id="txtM3Name">Shri R. Patel</h3>
+              <span class="member-designation-gov" id="txtM3Desig">Computer Vision & Grad-CAM Specialist</span>
+              <p class="member-responsibility-gov" id="txtM3Role">Module A Explainability engine, visual cue localization, and Layer-CAM heatmap generation.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member 4 -->
+        <div class="team-member-card-gov">
+          <div class="card-gov-header-bar">
+            <span>OFFICER PROFILE</span>
+            <span class="member-badge-tag" id="txtM4Badge">Module E Lead</span>
+          </div>
+          <div class="card-gov-body">
+            <img src="/static/assets/team/member4.jpg" alt="Smt. S. Gupta" class="member-avatar-gov">
+            <div class="member-details-gov">
+              <h3 class="member-name-gov" id="txtM4Name">Smt. S. Gupta</h3>
+              <span class="member-designation-gov" id="txtM4Desig">Multimodal NLP & CLIP Alignment Lead</span>
+              <p class="member-responsibility-gov" id="txtM4Role">Module E text-image semantic matching, claim consistency verification, and prompt auditing.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member 5 -->
+        <div class="team-member-card-gov">
+          <div class="card-gov-header-bar">
+            <span>OFFICER PROFILE</span>
+            <span class="member-badge-tag" id="txtM5Badge">Module D & G Lead</span>
+          </div>
+          <div class="card-gov-body">
+            <img src="/static/assets/team/member5.jpg" alt="Shri V. Iyer" class="member-avatar-gov">
+            <div class="member-details-gov">
+              <h3 class="member-name-gov" id="txtM5Name">Shri V. Iyer</h3>
+              <span class="member-designation-gov" id="txtM5Desig">Security & Active Defense Specialist</span>
+              <p class="member-responsibility-gov" id="txtM5Role">Module D EXIF/C2PA metadata parser and Module G adversarial attack testing framework.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member 6 -->
+        <div class="team-member-card-gov">
+          <div class="card-gov-header-bar">
+            <span>OFFICER PROFILE</span>
+            <span class="member-badge-tag" id="txtM6Badge">Module F Lead</span>
+          </div>
+          <div class="card-gov-body">
+            <img src="/static/assets/team/member6.jpg" alt="Shri K. Singh" class="member-avatar-gov">
+            <div class="member-details-gov">
+              <h3 class="member-name-gov" id="txtM6Name">Shri K. Singh</h3>
+              <span class="member-designation-gov" id="txtM6Desig">Web Infrastructure & Full-Stack Engineer</span>
+              <p class="member-responsibility-gov" id="txtM6Role">Module F Real-time web application dashboard, GIGW UI design system, and FastAPI integration.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>"member-avatar-lg">
+          <div class="member-details-gov">
+            <span class="member-name-eng" id="txtM6Eng">Shri K. Singh</span>
+            <span class="member-name-hi" id="txtM6Hi">श्री के. सिंह</span>
+            <span class="member-designation" id="txtM6Desig">Web Infrastructure & Full-Stack Engineer</span>
+            <p class="member-responsibility" id="txtM6Role">Module F Real-time web application dashboard, GIGW UI design system, and FastAPI integration.</p>
+            <span class="member-badge-tag" id="txtM6Badge">Module F Lead</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mode 4: Dedicated Technical Methodology Section (#about) (Hidden by Default) -->
+    <div class="gov-card" id="aboutSection" style="display: none;">
+      <div class="gov-card-header">
+        <h2 class="gov-card-title" id="txtAboutHeading">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Technical Methodology & Forensic Framework Specifications
+        </h2>
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--gov-navy);" id="txtAboutSub">SIH 2026 C-433 Technical Spec</span>
+      </div>
+      <div class="gov-card-body" style="display: grid; gap: 1.25rem;">
+        
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
+          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodCoreTitle">1. Mandatory Core Task: Unseen Generator Generalisation</h3>
+          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodCoreDesc">
+            SignalScope uses a transfer-learning convolutional backbone paired with spatial noise residual extraction (FFT/DCT high-frequency artifact analysis). Predictions are evaluated on a held-out test split featuring unseen generator architectures (Midjourney v6, SDXL, Flux, DALL-E 3) under calibrated ROC-AUC metrics.
+          </p>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
+          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModATitle">2. Bonus Module A: Faithful Visual Explanations (Grad-CAM)</h3>
+          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModADesc">
+            Provides localized visual saliency heatmaps highlighting exact pixel-level anomalies such as texture warping, irregular specular reflections, and anatomical flaws. Cites grounded natural language points without over-claiming certainty.
+          </p>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
+          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModBTitle">3. Bonus Module B: Generator Family & Model Architecture Attribution</h3>
+          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModBDesc">
+            Classifies generator families into Latent Diffusion, Generative Adversarial Networks (GANs), and Autoregressive Transformer architectures. Provides granular probability distributions across specific underlying models.
+          </p>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
+          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModCTitle">4. Bonus Module C: Robustness Under Image Degradation Vectors</h3>
+          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModCDesc">
+            Evaluates prediction resilience under severe lossy compression (JPEG Q30–Q90), downsampling, spatial noise addition, and social media platform re-encoding pipelines.
+          </p>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
+          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModDTitle">5. Bonus Module D: Provenance, EXIF & Cryptographic C2PA Verification</h3>
+          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModDDesc">
+            Extracts hardware camera EXIF records and validates Coalition for Content Provenance and Authenticity (C2PA) digital signatures to detect synthetic header tampering.
+          </p>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
+          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModETitle">6. Bonus Module E: Multimodal Image-Text Alignment & Claim Verification</h3>
+          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModEDesc">
+            Employs CLIP cross-modal semantic embeddings to evaluate alignment between submitted image content and accompanying news captions, identifying out-of-context misrepresentation.
+          </p>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
+          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModFTitle">7. Bonus Module F: Real-time Web Dashboard & REST API Architecture</h3>
+          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModFDesc">
+            Full-stack web application built following GIGW 3.0 government accessibility standards, backed by FastAPI asynchronous microservices for low-latency batch image scanning.
+          </p>
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
+          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModGTitle">8. Bonus Module G: Active Defense & Adversarial Attack Vulnerability Testing</h3>
+          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModGDesc">
+            Tests classifier robustness against adversarial perturbation attacks (FGSM, PGD, spatial blurring) and applies targeted defensive smoothing to maintain detection reliability.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Results Display Grid (Official Forensic Certificate View) -->
+    <div class="results-grid" id="resultsGrid" style="display: none;">
+      
+      <!-- Left Column: Forensic Report Certificate & Heatmap Overlay -->
+      <div class="certificate-card">
+        <div class="cert-header">
+          <div>
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--gov-navy);" id="txtCertHeader">FORENSIC VERIFICATION REPORT</h3>
+            <span style="font-size: 0.75rem; color: var(--text-muted);" id="txtCertSub">Calibrated Likelihood Standards • SignalScope Certificate</span>
+          </div>
+          <span class="cert-stamp-badge" id="txtCertStamp">EVALUATED</span>
+        </div>
+
+        <div class="verdict-banner-gov" id="verdictBanner">
+          <div>
+            <div class="verdict-title-gov" id="verdictLabel">LIKELY FAKE</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);" id="verdictSubtitle">Probability Assessment Under Module Core</div>
+          </div>
+          <div class="verdict-score-gov" id="verdictScore">88.5%</div>
+        </div>
+
+        <div class="image-frame-gov">
+          <img id="baseImage" class="base-img" src="" alt="Submitted Artifact">
           <img id="heatmapImage" class="heatmap-img" src="" alt="Grad-CAM Heatmap Overlay">
         </div>
 
-        <div class="controls-bar">
-          <div class="slider-group">
-            <label for="opacitySlider">Heatmap Overlay</label>
+        <div class="controls-bar-gov">
+          <div class="slider-group-gov">
+            <label for="opacitySlider" id="txtHeatmapLabel">Grad-CAM Heatmap Overlay</label>
             <input type="range" id="opacitySlider" min="0" max="100" value="60" oninput="updateHeatmapOpacity(this.value)">
           </div>
-          <span style="font-size: 0.8rem; color: var(--text-muted);" id="imageResolution">512x512</span>
+          <span class="res-tag-gov" id="imageResolution">512x512</span>
         </div>
       </div>
 
       <!-- Right Column: Interactive Bonus Modules Tabs -->
-      <div class="modules-card">
-        <div class="tabs-header">
-          <button class="tab-btn active" onclick="switchTab('tab-a', this)">Module A (Visual Cues)</button>
-          <button class="tab-btn" onclick="switchTab('tab-b', this)">Module B (Attribution)</button>
-          <button class="tab-btn" onclick="switchTab('tab-c', this)">Module C (Robustness)</button>
-          <button class="tab-btn" onclick="switchTab('tab-d', this)">Module D (Metadata)</button>
-          <button class="tab-btn" onclick="switchTab('tab-e', this)">Module E (Multimodal)</button>
-          <button class="tab-btn" onclick="switchTab('tab-g', this)">Module G (Defense)</button>
+      <div class="modules-card-gov">
+        <div class="tabs-header-gov">
+          <button class="tab-btn-gov active" id="txtTabA" onclick="switchTab('tab-a', this)">Module A (Explanations)</button>
+          <button class="tab-btn-gov" id="txtTabB" onclick="switchTab('tab-b', this)">Module B (Attribution)</button>
+          <button class="tab-btn-gov" id="txtTabC" onclick="switchTab('tab-c', this)">Module C (Robustness)</button>
+          <button class="tab-btn-gov" id="txtTabD" onclick="switchTab('tab-d', this)">Module D (Metadata)</button>
+          <button class="tab-btn-gov" id="txtTabE" onclick="switchTab('tab-e', this)">Module E (Multimodal)</button>
+          <button class="tab-btn-gov" id="txtTabG" onclick="switchTab('tab-g', this)">Module G (Defense)</button>
         </div>
 
         <!-- Tab A: Module A Explainability -->
         <div id="tab-a" class="tab-content active">
-          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Headline Visual Cue Explanations</h3>
-          <p id="explanationSummary" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+          <h3 class="tab-heading-gov" id="txtHeadTabA">Headline Visual Artifact Cites & Explanations</h3>
+          <p id="explanationSummary" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.85rem;"></p>
           <div id="visualCuesContainer"></div>
         </div>
 
         <!-- Tab B: Module B Attribution -->
         <div id="tab-b" class="tab-content">
-          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Generator Family Attribution</h3>
-          <div class="metric-row">
-            <span class="metric-label">Predicted Family</span>
-            <span class="metric-val" id="attrFamily">-</span>
+          <h3 class="tab-heading-gov" id="txtHeadTabB">Generator Family & Model Architecture Attribution</h3>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblAttrFamily">Predicted Generator Family</span>
+            <span class="metric-val-gov" id="attrFamily">-</span>
           </div>
-          <div class="metric-row">
-            <span class="metric-label">Likely Model Architecture</span>
-            <span class="metric-val" id="attrModel">-</span>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblAttrModel">Likely Architecture Model</span>
+            <span class="metric-val-gov" id="attrModel">-</span>
           </div>
-          <div style="margin-top: 1rem;">
-            <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Family Probability Breakdown</h4>
+          <div style="margin-top: 1.25rem;">
+            <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase;" id="lblFamProb">Family Probability Breakdown</h4>
             <div id="familyProbContainer"></div>
           </div>
         </div>
 
         <!-- Tab C: Module C Robustness -->
         <div id="tab-c" class="tab-content">
-          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Robustness to Image Degradation</h3>
-          <div class="metric-row">
-            <span class="metric-label">Overall Stability Rating</span>
-            <span class="metric-val" id="robustnessRating">-</span>
+          <h3 class="tab-heading-gov" id="txtHeadTabC">Robustness Under Image Degradation Vectors</h3>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblRobustRating">Overall Stability Rating</span>
+            <span class="metric-val-gov" id="robustnessRating">-</span>
           </div>
-          <div class="metric-row">
-            <span class="metric-label">Stable Under JPEG Q70 Compression</span>
-            <span class="metric-val" id="robustnessJpeg">-</span>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblRobustJpeg">Stable Under JPEG Q70 Compression</span>
+            <span class="metric-val-gov" id="robustnessJpeg">-</span>
           </div>
-          <div style="margin-top: 1rem;">
-            <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">JPEG Compression Degradation Curve</h4>
+          <div style="margin-top: 1.25rem;">
+            <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase;" id="lblJpegCurve">JPEG Compression Degradation Curve</h4>
             <div id="jpegCurveContainer"></div>
           </div>
         </div>
 
         <!-- Tab D: Module D Metadata -->
         <div id="tab-d" class="tab-content">
-          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Provenance & Metadata Analysis</h3>
-          <div class="metric-row">
-            <span class="metric-label">EXIF Metadata Present</span>
-            <span class="metric-val" id="metaHasExif">-</span>
+          <h3 class="tab-heading-gov" id="txtHeadTabD">Provenance & Cryptographic Header Inspection</h3>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblExif">EXIF Metadata Status</span>
+            <span class="metric-val-gov" id="metaHasExif">-</span>
           </div>
-          <div class="metric-row">
-            <span class="metric-label">C2PA Signed Manifest</span>
-            <span class="metric-val" id="metaHasC2pa">-</span>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblC2pa">C2PA Signed Manifest Status</span>
+            <span class="metric-val-gov" id="metaHasC2pa">-</span>
           </div>
-          <div class="metric-row">
-            <span class="metric-label">Camera Make & Model</span>
-            <span class="metric-val" id="metaCamera">-</span>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblCamera">Hardware Camera Record</span>
+            <span class="metric-val-gov" id="metaCamera">-</span>
           </div>
-          <div class="metric-row">
-            <span class="metric-label">Provenance Integrity Assessment</span>
-            <span class="metric-val" id="metaAssessment" style="font-size: 0.8rem;">-</span>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblMetaAssessment">Integrity Assessment</span>
+            <span class="metric-val-gov" id="metaAssessment" style="font-size: 0.8rem;">-</span>
           </div>
         </div>
 
         <!-- Tab E: Module E Multimodal -->
         <div id="tab-e" class="tab-content">
-          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Multimodal Text-Image Alignment</h3>
-          <div class="metric-row">
-            <span class="metric-label">Provided Caption</span>
-            <span class="metric-val" id="multiCaption">-</span>
+          <h3 class="tab-heading-gov" id="txtHeadTabE">Multimodal Image-Text Alignment & Claim Consistency</h3>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblCaptionText">Target Claim Text</span>
+            <span class="metric-val-gov" id="multiCaption">-</span>
           </div>
-          <div class="metric-row">
-            <span class="metric-label">CLIP Semantic Match Score</span>
-            <span class="metric-val" id="multiScore">-</span>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblClipScore">CLIP Semantic Alignment Score</span>
+            <span class="metric-val-gov" id="multiScore">-</span>
           </div>
-          <div class="metric-row">
-            <span class="metric-label">Consistency Assessment</span>
-            <span class="metric-val" id="multiAssessment">-</span>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" id="lblMultiAssessment">Alignment Verdict</span>
+            <span class="metric-val-gov" id="multiAssessment">-</span>
           </div>
         </div>
 
         <!-- Tab G: Module G Active Defence -->
         <div id="tab-g" class="tab-content">
-          <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #a5b4fc;">Active Defence & Adversarial Vulnerability</h3>
+          <h3 class="tab-heading-gov" id="txtHeadTabG">Adversarial Defense & Vulnerability Testing</h3>
           <div id="activeDefenseContainer"></div>
         </div>
 
       </div>
     </div>
 
-    <!-- Batch Results Queue (Hidden until multi-file upload) -->
-    <div class="batch-section" id="batchSection" style="display: none;">
-      <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Batch Scan Results</h3>
-      <p style="font-size: 0.85rem; color: var(--text-muted);" id="batchSummary">Summary: 0 files analyzed</p>
+    <!-- Batch Scan Results View -->
+    <div class="batch-section-gov" id="batchSection" style="display: none;">
+      <div class="gov-card-header" style="background: transparent; padding: 0 0 1rem 0;">
+        <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--gov-navy);" id="txtBatchResultsTitle">
+          Bulk Directory Audit Summary Results
+        </h3>
+      </div>
+
+      <!-- Batch Overview Stats Grid -->
+      <div class="batch-stats-grid-gov">
+        <div class="stat-card-gov">
+          <div class="stat-label-gov" id="txtStatTotal">Total Submitted Artifacts</div>
+          <div class="stat-value-gov" id="statTotalImages">0</div>
+        </div>
+        <div class="stat-card-gov">
+          <div class="stat-label-gov" id="txtStatAi" style="color: #991B1B;">Probable Synthetic</div>
+          <div class="stat-value-gov" id="statAiCount" style="color: #991B1B;">0</div>
+        </div>
+        <div class="stat-card-gov">
+          <div class="stat-label-gov" id="txtStatReal" style="color: #166534;">Probable Authentic Real</div>
+          <div class="stat-value-gov" id="statRealCount" style="color: #166534;">0</div>
+        </div>
+        <div class="stat-card-gov">
+          <div class="stat-label-gov" id="txtStatLatency">Total Processing Latency</div>
+          <div class="stat-value-gov" id="statLatency">0.0s</div>
+        </div>
+      </div>
       
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Filename</th>
-            <th>Verdict</th>
-            <th>Confidence</th>
-            <th>Attribution</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="batchTableBody">
-        </tbody>
-      </table>
+      <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 4px;">
+        <table class="table-gov">
+          <thead>
+            <tr>
+              <th id="txtThFilename">Filename</th>
+              <th id="txtThVerdict">Verdict</th>
+              <th id="txtThConfidence">Confidence Score</th>
+              <th id="txtThModel">Attribution Architecture</th>
+              <th id="txtThActions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="batchTableBody">
+          </tbody>
+        </table>
+      </div>
     </div>
 
-  </div>
+  </main>
 
-  <footer class="footer">
-    SignalScope &copy; 2026 | SIH Internal Hackathon | L. J. Institute of Engineering & Technology [C-433]
+  <!-- 8. Footer -->
+  <footer class="gov-footer">
+    <div class="footer-bottom-bar" id="txtFooterCopyright">
+      SignalScope Media Forensics & Authenticity Engine
+    </div>
   </footer>
 
   <script src="/static/app.js"></script>

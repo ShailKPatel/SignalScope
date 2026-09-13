@@ -32,7 +32,7 @@ venv.bak/
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
 
-# ML Datasets, Weights & Artifacts (Large Files)
+# ML Datasets, Weights & Model Checkpoints (Large Files)
 data/
 datasets/
 raw_data/
@@ -49,6 +49,7 @@ saved_models/
 *.ckpt
 *.tflite
 *.pb
+*.engine
 runs/
 wandb/
 .tensorboard/
@@ -64,12 +65,20 @@ out/
 .nuxt/
 .cache/
 
+# Testing, Logs & Execution Outputs
+*.log
+logs/
+.pytest_cache/
+.coverage
+htmlcov/
+verification_results.json
+
 # Environment Variables & Secret Files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+*.pem
+*.key
 
 # Operating System & IDE Files
 .DS_Store
@@ -83,3 +92,4 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+*~
