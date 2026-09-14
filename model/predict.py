@@ -75,12 +75,12 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
 
     else:
         # =====================================================================
-        # STEP 2: LEVEL 2 DEEP LEARNING VISION MODEL CLASSIFIER (3-MODEL ENSEMBLE)
+        # STEP 2: LEVEL 2 DEEP LEARNING VISION MODEL CLASSIFIER (5-MODEL MAJORITY VOTE)
         # =====================================================================
-        detection_level = "Level 2: Deep Learning Vision Model (3-Model Ensemble)"
+        detection_level = "Level 2: Deep Learning Vision Model (5-Model Majority Vote)"
         ensemble_info = {}
-        
-        # Tier 1: Multi-Model Expert Ensemble (ViT + Swin/ConvNeXt + DeepFake Detector v2)
+
+        # Tier 1: Majority-vote ensemble (2x ViT + 2x Swin + ResNet34/FFT dual-stream)
         try:
             from .ensemble import run_ensemble_inference
             ens_prob, ens_cam, ens_info = run_ensemble_inference(img)
@@ -119,15 +119,21 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
                     model.load_state_dict(checkpoint["model_state_dict"])
                     model.eval()
                     
+                    # Must mirror the training transform, otherwise the resize
+                    # interpolates away the frequency artifacts the model keys on.
+                    native = checkpoint.get("native_size", 200)
+                    crop = checkpoint.get("image_size", 192)
                     tf = transforms.Compose([
-                        transforms.Resize((224, 224)),
+                        transforms.Resize(native),
+                        transforms.CenterCrop(crop),
                         transforms.ToTensor(),
                         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                     ])
                     img_t = tf(img).unsqueeze(0).to(device)
+                    temperature = checkpoint.get("temperature", 1.0)
                     with torch.no_grad():
-                        prob_tensor = model.predict_probability(img_t)
-                        raw_prob = float(prob_tensor.cpu().item())
+                        logits = model(img_t) / temperature
+                        raw_prob = float(torch.sigmoid(logits).cpu().item())
             except Exception:
                 raw_prob = None
 

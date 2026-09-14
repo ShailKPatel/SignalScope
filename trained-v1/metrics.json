@@ -1,0 +1,49 @@
+{
+  "backbone": "resnet34",
+  "image_size": 224,
+  "epochs": 8,
+  "temperature": 1.7448900938034058,
+  "train_size": 85447,
+  "val_size": 9494,
+  "unseen_test_size": 10000,
+  "held_out_generators": [
+    "glide",
+    "stable_diffusion"
+  ],
+  "excluded_face_sources": [
+    "celebahq",
+    "face_synthetics",
+    "ffhq",
+    "mat",
+    "metfaces",
+    "sfhq",
+    "star_gan",
+    "stylegan1",
+    "stylegan2",
+    "stylegan3"
+  ],
+  "validation": {
+    "auc": 0.9258746738900054,
+    "macro_f1": 0.8491469533005149,
+    "accuracy": 0.8493785548767643,
+    "fpr": 0.12471467109358789,
+    "confusion": {
+      "tn": 4218,
+      "fp": 601,
+      "fn": 829,
+      "tp": 3846
+    }
+  },
+  "unseen_generator_split": {
+    "auc": 0.6970095799999999,
+    "macro_f1": 0.5725500228792759,
+    "accuracy": 0.5966,
+    "fpr": 0.1662,
+    "confusion": {
+      "tn": 4169,
+      "fp": 831,
+      "fn": 3203,
+      "tp": 1797
+    }
+  }
+}

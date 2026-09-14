@@ -52,8 +52,7 @@ def test_ensemble_5_families_standalone():
         print(f"    Architecture:         {m['architecture']}")
         print(f"    Specialization:       {m['specialization']}")
         print(f"    AI Probability:       {m['ai_probability'] * 100:.2f}%")
-        print(f"    Uncertainty H:        {m['entropy_uncertainty']}")
-        print(f"    Ensemble Weight:      {m['ensemble_weight']}")
+        print(f"    Votes AI:             {m['is_ai_pred']}")
 
     print(f"\n  Composite Saliency Map Shape: {composite_cam.shape if composite_cam is not None else None}")
     assert prob is not None

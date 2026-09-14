@@ -25,6 +25,8 @@ except ImportError:
     HAS_TRANSFORMERS = False
 
 # Global cache for loaded model and processor
+from .labels import ai_class_index
+
 _LOADED_MODEL = None
 _LOADED_PROCESSOR = None
 _LOADED_MODEL_NAME = None
@@ -33,7 +35,7 @@ _LOADED_MODEL_NAME = None
 _CANDIDATE_MODELS = [
     "dima806/deepfake_vs_real_image_detection",
     "umm-maybe/AI-image-detector",
-    "prithivMLmods/Deep-Fake-Detector-v2"
+    "prithivMLmods/Deep-Fake-Detector-v2-Model"
 ]
 
 def get_pretrained_ai_detector(model_name=None):
@@ -196,17 +198,7 @@ def run_pretrained_inference(pil_img, model_name=None):
             logits = outputs.logits
             probs = torch.softmax(logits, dim=-1)[0]
             
-        id2label = model.config.id2label
-        fake_label_idx = None
-        for idx, lbl in id2label.items():
-            lbl_str = str(lbl).lower()
-            if any(k in lbl_str for k in ["fake", "ai", "synthetic", "generated", "1"]):
-                fake_label_idx = int(idx)
-                break
-                
-        if fake_label_idx is None:
-            fake_label_idx = 1 if len(id2label) > 1 else 0
-
+        fake_label_idx = ai_class_index(model.config.id2label)
         ai_confidence = float(probs[fake_label_idx].item())
         is_ai = ai_confidence >= 0.50
 

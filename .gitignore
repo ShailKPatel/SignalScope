@@ -27,6 +27,8 @@ env/
 ENV/
 env.bak/
 venv.bak/
+signalscope/
+pyvenv.cfg
 
 # Jupyter Notebooks & Checkpoints
 .ipynb_checkpoints
@@ -50,6 +52,10 @@ saved_models/
 *.tflite
 *.pb
 *.engine
+*.npy
+*.npz
+*.parquet
+trained-v*/*.zip
 runs/
 wandb/
 .tensorboard/
