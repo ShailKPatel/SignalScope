@@ -1,24 +1,24 @@
 """
-SignalScope 5-Family Multi-Model Expert Ensemble Engine
-Combines 5 Orthogonal Model Architecture Families:
-  1. ViT Family: dima806/deepfake_vs_real_image_detection (Global Vision Transformer Self-Attention)
-  2. Swin Family: umm-maybe/AI-image-detector (Hierarchical Shifted Window Transformer)
-  3. SDXL Family: Organika/sdxl-detector (Latent Diffusion & SDXL Texture Classifier)
-  4. Dual-Stream Frequency Family: SignalScope Dual-Stream (ResNet34 + 2D Fast Fourier Transform Frequency Grid)
-  5. Spatial Spectrum Family: SignalScope Spatial Spectrum Analyzer (High-Frequency Gradient Artifacts)
+SignalScope 5-Member Majority-Vote Ensemble
+  1. dima806/deepfake_vs_real_image_detection   (ViT-Base)
+  2. umm-maybe/AI-image-detector                 (Swin)
+  3. Organika/sdxl-detector                      (Swin, fine-tuned from #2)
+  4. prithivMLmods/Deep-Fake-Detector-v2-Model   (ViT-Base)
+  5. SignalScope Dual-Stream                     (ResNet34 spatial + 2D FFT frequency)
 
-Executes Adaptive Entropy-Weighted Soft Voting across all 5 families and blends composite 2D Grad-CAM heatmaps.
+Each member's raw output is converted to P(AI-generated) by model.labels, votes
+AI when that probability is >= 0.5, and the majority wins. An even split (only
+possible when a member fails to load) resolves to real, since wrongly flagging a
+genuine photo is the costly error.
 """
 
 import os
 import time
-import hashlib
 import numpy as np
 from PIL import Image
 
 try:
     import torch
-    import torch.nn.functional as F
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -29,261 +29,278 @@ try:
 except ImportError:
     HAS_TRANSFORMERS = False
 
+from .labels import ai_class_index
 from .pretrained_detector import generate_spatial_gradcam
 
-# Global Cache for Loaded Ensemble Models
-_ENSEMBLE_MODELS = {}
+_ROOT = os.path.join(os.path.dirname(__file__), "..")
+_DUAL_STREAM_CHECKPOINTS = [
+    os.path.join(_ROOT, "trained-v1", "best_model.zip"),
+    os.path.join(_ROOT, "retrain", "checkpoints", "best_model.pt"),
+]
 
-# 5 Distinct Architectural Model Families
-_5_MODEL_FAMILIES = [
+_ENSEMBLE_MODELS = {}
+_DUAL_STREAM = {}
+
+ENSEMBLE_MEMBERS = [
     {
-        "id": "family_vit",
+        "id": "vit_dima806",
         "family": "Vision Transformer (ViT)",
         "name": "dima806/deepfake_vs_real_image_detection",
-        "architecture": "ViT-Base Patch Self-Attention",
+        "architecture": "ViT-Base/16 (in21k), fine-tuned",
         "specialization": "Global Spatial Attention & Semantic Incoherence",
-        "weight_default": 0.25
     },
     {
-        "id": "family_swin",
+        "id": "swin_umm_maybe",
         "family": "Swin Transformer",
         "name": "umm-maybe/AI-image-detector",
         "architecture": "Hierarchical Shifted Window Transformer",
-        "specialization": "Patch-level Micro Texture & Diffusion Artifacts",
-        "weight_default": 0.22
+        "specialization": "Artistic AI Imagery (VQGAN / early diffusion)",
     },
     {
-        "id": "family_sdxl",
-        "family": "SDXL Latent Classifier",
+        "id": "swin_sdxl",
+        "family": "Swin Transformer (SDXL fine-tune)",
         "name": "Organika/sdxl-detector",
-        "architecture": "Shifted Window Latent Diffusion Classifier",
+        "architecture": "Swin, fine-tuned on Wikimedia vs SDXL pairs",
         "specialization": "Latent Diffusion Noise & SDXL Render Anomaly Detection",
-        "weight_default": 0.20
     },
     {
-        "id": "family_dual_stream_freq",
+        "id": "vit_prithiv_v2",
+        "family": "Vision Transformer (ViT)",
+        "name": "prithivMLmods/Deep-Fake-Detector-v2-Model",
+        "architecture": "ViT-Base/16 (in21k), fine-tuned",
+        "specialization": "Deepfake vs Realism Classification",
+    },
+    {
+        "id": "dual_stream_freq",
         "family": "Dual-Stream Spatial + 2D FFT Frequency",
         "name": "SignalScope PyTorch Dual-Stream Backbone",
         "architecture": "ResNet34 + 2D Fast Fourier Transform (FFT)",
         "specialization": "High-Frequency Spectral Grid Spikes & Fourier Artifacts",
-        "weight_default": 0.18
     },
-    {
-        "id": "family_spatial_spectrum",
-        "family": "Spatial Spectrum Analyzer",
-        "name": "SignalScope High-Frequency Gradient Analyzer",
-        "architecture": "Sobel Gradient High-Frequency Edge Analyzer",
-        "specialization": "Spatial Boundary Discontinuity & Edge Pixel Noise",
-        "weight_default": 0.15
-    }
 ]
 
 
 def load_ensemble_model(model_name):
     """
-    Loads and caches a HuggingFace vision classification model.
+    Loads and caches a HuggingFace vision classification model with its AI class index.
+    Returns (model, processor, ai_idx) or (None, None, None).
     """
     if not (HAS_TORCH and HAS_TRANSFORMERS):
-        return None, None
+        return None, None, None
 
     if model_name in _ENSEMBLE_MODELS:
         return _ENSEMBLE_MODELS[model_name]
 
-    print(f"Ensemble Engine: Loading 5-Family Model '{model_name}'...")
-    
-    # Try local cache first
-    try:
-        proc = AutoImageProcessor.from_pretrained(model_name, local_files_only=True)
-        mdl = AutoModelForImageClassification.from_pretrained(model_name, attn_implementation="eager", local_files_only=True)
-        mdl.eval()
-        _ENSEMBLE_MODELS[model_name] = (mdl, proc)
-        print(f"Successfully loaded '{model_name}' from local cache!")
-        return mdl, proc
-    except Exception:
-        pass
+    for local_only in (True, False):
+        try:
+            proc = AutoImageProcessor.from_pretrained(model_name, local_files_only=local_only)
+            mdl = AutoModelForImageClassification.from_pretrained(
+                model_name, attn_implementation="eager", local_files_only=local_only)
+            mdl.eval()
+            entry = (mdl, proc, ai_class_index(mdl.config.id2label))
+            _ENSEMBLE_MODELS[model_name] = entry
+            print(f"Ensemble: loaded '{model_name}' id2label={mdl.config.id2label} -> AI index {entry[2]}")
+            return entry
+        except Exception as e:
+            if not local_only:
+                print(f"Ensemble load note for '{model_name}': {e}")
+    return None, None, None
 
-    # Fallback online download
-    try:
-        proc = AutoImageProcessor.from_pretrained(model_name)
-        mdl = AutoModelForImageClassification.from_pretrained(model_name, attn_implementation="eager")
-        mdl.eval()
-        _ENSEMBLE_MODELS[model_name] = (mdl, proc)
-        print(f"Successfully downloaded and loaded '{model_name}'!")
-        return mdl, proc
-    except Exception as e:
-        print(f"Ensemble load note for '{model_name}': {e}")
+
+def evaluate_hf_member(model_name, pil_img, with_cam=True):
+    """Returns (p_ai, cam_map) for a HuggingFace member, or (None, None)."""
+    mdl, proc, ai_idx = load_ensemble_model(model_name)
+    if mdl is None:
         return None, None
-
-
-def evaluate_single_model(model, processor, pil_img):
-    """
-    Evaluates a single Hugging Face model and extracts confidence score + Grad-CAM heatmap.
-    """
-    if model is None or processor is None:
-        return None, None
-
     try:
-        inputs = processor(images=pil_img.convert("RGB"), return_tensors="pt")
+        inputs = proc(images=pil_img.convert("RGB"), return_tensors="pt")
         with torch.no_grad():
-            outputs = model(**inputs)
-            logits = outputs.logits
-            probs = torch.softmax(logits, dim=-1)[0]
-            
-        id2label = model.config.id2label
-        fake_label_idx = None
-        for idx, lbl in id2label.items():
-            lbl_str = str(lbl).lower()
-            if any(k in lbl_str for k in ["fake", "ai", "synthetic", "generated", "1"]):
-                fake_label_idx = int(idx)
-                break
-                
-        if fake_label_idx is None:
-            fake_label_idx = 1 if len(id2label) > 1 else 0
-
-        ai_prob = float(probs[fake_label_idx].item())
-        
-        # Extract Grad-CAM / Attention map
-        cam_map = generate_spatial_gradcam(model, inputs, target_class_idx=fake_label_idx)
-
-        return ai_prob, cam_map
+            p_ai = float(torch.softmax(mdl(**inputs).logits, dim=-1)[0, ai_idx].item())
+        cam = generate_spatial_gradcam(mdl, inputs, target_class_idx=ai_idx) if with_cam else None
+        return p_ai, cam
     except Exception as e:
-        print(f"Single model evaluation note: {e}")
+        print(f"Ensemble member '{model_name}' note: {e}")
         return None, None
 
 
-def evaluate_dual_stream_frequency_family(pil_img):
-    """
-    Evaluates Family 4: SignalScope Dual-Stream Spatial + 2D FFT Frequency Backbone.
-    """
-    ckpt_pt = os.path.join(os.path.dirname(__file__), "..", "retrain", "checkpoints", "best_model.pt")
-    try:
-        if os.path.exists(ckpt_pt):
-            import torchvision.transforms as transforms
-            from retrain.backbone import SignalScopeDualStreamModel
-            
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-            checkpoint = torch.load(ckpt_pt, map_location=device, weights_only=False)
-            backbone_name = checkpoint.get("spatial_backbone", "resnet34")
-            
-            model = SignalScopeDualStreamModel(spatial_backbone=backbone_name, pretrained=False).to(device)
-            model.load_state_dict(checkpoint["model_state_dict"])
+def load_dual_stream():
+    """Loads the dual-stream checkpoint once. Returns (model, transform, temperature) or None."""
+    if "entry" in _DUAL_STREAM:
+        return _DUAL_STREAM["entry"]
+    _DUAL_STREAM["entry"] = None
+    if not HAS_TORCH:
+        return None
+
+    import torchvision.transforms as transforms
+    from retrain.backbone import SignalScopeDualStreamModel
+
+    for path in _DUAL_STREAM_CHECKPOINTS:
+        if not os.path.exists(path):
+            continue
+        try:
+            ckpt = torch.load(path, map_location="cpu", weights_only=False)
+            state = ckpt.get("model_state_dict", ckpt)
+            model = SignalScopeDualStreamModel(
+                spatial_backbone=ckpt.get("spatial_backbone", ckpt.get("backbone", "resnet34")), pretrained=False)
+            model.load_state_dict(state)
             model.eval()
-            
-            tf = transforms.Compose([
-                transforms.Resize((224, 224)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            ])
-            img_t = tf(pil_img.convert("RGB")).unsqueeze(0).to(device)
-            with torch.no_grad():
-                prob_tensor = model.predict_probability(img_t)
-                return float(prob_tensor.cpu().item()), None
-    except Exception as e:
-        print(f"Dual-Stream Frequency family note: {e}")
-        
-    return 0.45, None
+            # Mirror the training transform. Newer checkpoints record native_size (resize + center
+            # crop, which keeps frequency artifacts); older ones such as trained-v1 were trained
+            # on a plain square resize to image_size.
+            if "native_size" in ckpt:
+                tf = transforms.Compose([
+                    transforms.Resize(ckpt["native_size"]),
+                    transforms.CenterCrop(ckpt["image_size"]),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ])
+            else:
+                size = ckpt.get("image_size", 224)
+                tf = transforms.Compose([
+                    transforms.Resize((size, size)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ])
+            # square_size marks the plain-resize pipeline, which the batched path can reproduce exactly.
+            square_size = None if "native_size" in ckpt else ckpt.get("image_size", 224)
+            entry = (model, tf, float(ckpt.get("temperature", 1.0)), square_size)
+            _DUAL_STREAM["entry"] = entry
+            print(f"Ensemble: loaded dual-stream checkpoint '{os.path.normpath(path)}' (T={entry[2]:.3f})")
+            return entry
+        except Exception as e:
+            print(f"Dual-stream checkpoint '{path}' note: {e}")
+    return None
 
 
-def evaluate_spatial_spectrum_family(pil_img):
-    """
-    Evaluates Family 5: SignalScope Spatial Spectrum & Gradient High-Frequency Analyzer.
-    """
+def evaluate_dual_stream_member(pil_img):
+    """Returns (p_ai, None). Trained with label 1 = AI, so sigmoid output is already P(AI)."""
+    entry = load_dual_stream()
+    if entry is None:
+        return None, None
+    model, tf, temperature, _ = entry
     try:
-        gray = pil_img.convert("L")
-        arr = np.array(gray, dtype=np.float32)
-        
-        # Compute Sobel spatial gradients
-        gx = np.gradient(arr, axis=1)
-        gy = np.gradient(arr, axis=0)
-        grad_mag = np.sqrt(gx**2 + gy**2)
-        
-        high_freq_ratio = float(np.mean(grad_mag > 35.0))
-        
-        # Synthetic diffusion images often exhibit abnormally smooth or uniform high-frequency distribution
-        score = float(np.clip(0.30 + high_freq_ratio * 0.8, 0.15, 0.85))
-        return score, None
-    except Exception:
-        return 0.40, None
+        with torch.no_grad():
+            logit = model(tf(pil_img.convert("RGB")).unsqueeze(0))
+            return float(torch.sigmoid(logit / temperature).item()), None
+    except Exception as e:
+        print(f"Dual-stream member note: {e}")
+        return None, None
+
+
+def score_members(pil_img, with_cam=False):
+    """Runs every member. Returns a list of (member_cfg, p_ai or None, cam or None)."""
+    results = []
+    for cfg in ENSEMBLE_MEMBERS:
+        if cfg["id"] == "dual_stream_freq":
+            p_ai, cam = evaluate_dual_stream_member(pil_img)
+        else:
+            p_ai, cam = evaluate_hf_member(cfg["name"], pil_img, with_cam=with_cam)
+        results.append((cfg, p_ai, cam))
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Batched scoring (evaluation). Every HF member here square-resizes to 224 with
+# no crop (ViTs bilinear, Swins bicubic), and the trained-v1 dual-stream uses a
+# plain bilinear 224 resize, so resizing once per resample mode and normalizing
+# in torch feeds each model exactly what its own preprocessing would.
+# ---------------------------------------------------------------------------
+_BATCH_SIZE = 224
+_PIL_RESAMPLE = {2: Image.BILINEAR, 3: Image.BICUBIC}
+
+
+def prepare_image(pil_img):
+    """CPU-side prep, safe to run in threads: {resample_mode: uint8 HxWx3 array}."""
+    rgb = pil_img.convert("RGB")
+    return {mode: np.asarray(rgb.resize((_BATCH_SIZE, _BATCH_SIZE), pil_mode)) for mode, pil_mode in _PIL_RESAMPLE.items()}
+
+
+def _to_normalized(prepared, mode, mean, std):
+    x = torch.from_numpy(np.stack([p[mode] for p in prepared])).permute(0, 3, 1, 2).float() / 255.0
+    return (x - torch.tensor(mean).view(1, 3, 1, 1)) / torch.tensor(std).view(1, 3, 1, 1)
+
+
+@torch.no_grad() if HAS_TORCH else (lambda f: f)
+def score_members_batch(prepared):
+    """
+    Scores a batch of prepare_image() outputs with every member.
+    Returns an [N, len(ENSEMBLE_MEMBERS)] array of P(AI), NaN where a member is unavailable.
+    """
+    out = np.full((len(prepared), len(ENSEMBLE_MEMBERS)), np.nan)
+    for j, cfg in enumerate(ENSEMBLE_MEMBERS):
+        if cfg["id"] == "dual_stream_freq":
+            entry = load_dual_stream()
+            if entry is None:
+                continue
+            model, tf, temperature, square_size = entry
+            if square_size != _BATCH_SIZE:
+                x = torch.stack([tf(Image.fromarray(p[2])) for p in prepared])
+            else:
+                x = _to_normalized(prepared, 2, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            out[:, j] = torch.sigmoid(model(x) / temperature).squeeze(1).numpy()
+        else:
+            mdl, proc, ai_idx = load_ensemble_model(cfg["name"])
+            if mdl is None:
+                continue
+            size = proc.size
+            hw = (size.get("height"), size.get("width")) if isinstance(size, dict) else (getattr(size, "height", None), getattr(size, "width", None))
+            if hw != (_BATCH_SIZE, _BATCH_SIZE) or proc.resample not in _PIL_RESAMPLE \
+                    or getattr(proc, "do_center_crop", False):
+                raise ValueError(f"{cfg['name']} preprocessing {size}/{proc.resample} not supported by the batched path")
+            x = _to_normalized(prepared, proc.resample, proc.image_mean, proc.image_std)
+            out[:, j] = torch.softmax(mdl(pixel_values=x).logits, dim=-1)[:, ai_idx].numpy()
+    return out
+
+
+def majority_vote(p_ai_values):
+    """
+    Hard majority vote over P(AI) values. Returns (is_ai, ai_votes, n_voters).
+    Ties resolve to real.
+    """
+    votes = [p >= 0.5 for p in p_ai_values]
+    ai_votes = sum(votes)
+    return ai_votes > len(votes) / 2, ai_votes, len(votes)
 
 
 def run_ensemble_inference(pil_img):
     """
-    Executes 5-Family Multi-Model Expert Ensemble inference.
-    Returns aggregated probability score, composite saliency map, and family breakdowns.
+    Returns (score, composite_cam, breakdown). score is the fraction of AI votes,
+    nudged just below 0.5 on a tie so a >= 0.5 threshold agrees with the vote.
     """
     t0 = time.time()
-    model_results = []
-    cam_maps = []
-    
-    for cfg in _5_MODEL_FAMILIES:
-        m_id = cfg["id"]
-        m_family = cfg["family"]
-        m_name = cfg["name"]
-        
-        prob, cam = None, None
-        
-        if m_id == "family_dual_stream_freq":
-            prob, cam = evaluate_dual_stream_frequency_family(pil_img)
-        elif m_id == "family_spatial_spectrum":
-            prob, cam = evaluate_spatial_spectrum_family(pil_img)
-        else:
-            mdl, proc = load_ensemble_model(m_name)
-            prob, cam = evaluate_single_model(mdl, proc, pil_img)
-        
-        if prob is not None:
-            # Entropy calculation for uncertainty down-weighting: H = -p log2 p - (1-p) log2 (1-p)
-            p_clamped = max(1e-6, min(1.0 - 1e-6, prob))
-            entropy = -p_clamped * np.log2(p_clamped) - (1.0 - p_clamped) * np.log2(1.0 - p_clamped)
-            confidence_weight = (1.0 - 0.5 * entropy) * cfg["weight_default"]
-            
-            model_results.append({
-                "model_id": m_id,
-                "family": m_family,
-                "model_name": m_name,
-                "architecture": cfg["architecture"],
-                "specialization": cfg["specialization"],
-                "ai_probability": round(prob, 4),
-                "is_ai_pred": prob >= 0.50,
-                "entropy_uncertainty": round(entropy, 4),
-                "ensemble_weight": round(confidence_weight, 4)
-            })
-            
-            if cam is not None:
-                cam_maps.append(cam)
-
-    if not model_results:
+    scored = [(cfg, p, cam) for cfg, p, cam in score_members(pil_img, with_cam=True) if p is not None]
+    if not scored:
         return None, None, {}
 
-    # Soft Voting weighted probability score calculation across all 5 evaluated model families
-    total_w = sum(r["ensemble_weight"] for r in model_results)
-    if total_w > 0:
-        ensemble_prob = sum(r["ai_probability"] * r["ensemble_weight"] for r in model_results) / total_w
-    else:
-        ensemble_prob = sum(r["ai_probability"] for r in model_results) / len(model_results)
+    is_ai, ai_votes, n = majority_vote([p for _, p, _ in scored])
+    score = ai_votes / n
+    if not is_ai and score >= 0.5:
+        score = 0.499
 
-    ensemble_prob = round(float(ensemble_prob), 4)
+    model_results = [{
+        "model_id": cfg["id"],
+        "family": cfg["family"],
+        "model_name": cfg["name"],
+        "architecture": cfg["architecture"],
+        "specialization": cfg["specialization"],
+        "ai_probability": round(p, 4),
+        "is_ai_pred": p >= 0.5,
+    } for cfg, p, _ in scored]
 
-    # Composite Saliency Heatmap Fusion (Element-wise Maximum Pooling across model families)
     composite_cam = None
-    if cam_maps:
-        target_shape = cam_maps[0].shape
-        valid_cams = []
-        for c in cam_maps:
-            if c.shape == target_shape:
-                valid_cams.append(c)
-        if valid_cams:
-            stacked_cams = np.stack(valid_cams, axis=0)
-            composite_cam = np.max(stacked_cams, axis=0)
-            if composite_cam.max() > 0:
-                composite_cam = (composite_cam - composite_cam.min()) / (composite_cam.max() - composite_cam.min() + 1e-8)
+    cams = [cam for _, _, cam in scored if cam is not None]
+    if cams:
+        valid = [c for c in cams if c.shape == cams[0].shape]
+        composite_cam = np.max(np.stack(valid, axis=0), axis=0)
+        if composite_cam.max() > 0:
+            composite_cam = (composite_cam - composite_cam.min()) / (composite_cam.max() - composite_cam.min() + 1e-8)
 
-    elapsed_ms = round((time.time() - t0) * 1000, 2)
-
-    ensemble_breakdown = {
-        "ensemble_strategy": "5-Family Adaptive Entropy-Weighted Soft Voting & Composite Saliency Fusion",
-        "num_families_evaluated": len(model_results),
-        "total_inference_ms": elapsed_ms,
-        "family_models": model_results
+    breakdown = {
+        "ensemble_strategy": "Hard Majority Vote (ties resolve to real) & Composite Saliency Fusion",
+        "num_families_evaluated": n,
+        "ai_votes": ai_votes,
+        "mean_ai_probability": round(float(np.mean([p for _, p, _ in scored])), 4),
+        "total_inference_ms": round((time.time() - t0) * 1000, 2),
+        "family_models": model_results,
     }
-
-    return ensemble_prob, composite_cam, ensemble_breakdown
+    return round(float(score), 4), composite_cam, breakdown

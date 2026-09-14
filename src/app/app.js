@@ -1,4 +1,4 @@
-// SignalScope Client Engine - Takniki Vibhad
+// SignalScope Client Engine - Takniki Vibhag
 // SIH 2026 Internal Hackathon Submission (Problem Statement C-433)
 
 let currentResultData = null;
@@ -23,7 +23,7 @@ const translations = {
     directorate: "Media Verification & Authenticity Platform",
     emblemSub: "AUTHENTICITY ENGINE",
     leader1Name: "Shri A. Sharma",
-    leader1Role: "Team Leader (Takniki Vibhad)",
+    leader1Role: "Team Leader (Takniki Vibhag)",
     leader2Name: "Dr. P. Verma",
     leader2Role: "Principal AI Research Lead",
     menuSingle: "Single Image Submission Desk",
@@ -59,7 +59,7 @@ const translations = {
     dropTitleFolder: "Select Directory Folder for High-Throughput Audit",
     dropSubFolder: "Submit complete image directories for automated high-throughput media verification, batch threat statistics, and departmental compliance reporting.",
     btnChooseFolder: "Choose Image Directory",
-    teamSectionTitle: "Team Directorate & Project Contributors (Takniki Vibhad)",
+    teamSectionTitle: "Team Directorate & Project Contributors (Takniki Vibhag)",
     teamSectionSub: "SIH 2026 • Problem Statement C-433",
     m1Name: "Shri A. Sharma",
     m1Desig: "Team Leader & System Architect",
@@ -160,7 +160,7 @@ const translations = {
   hi: {
     modalTitle: "मुख्य सार्वजनिक परामर्श / IMPORTANT PUBLIC ADVISORY",
     modalTitleEng: "SIH 2026 Media Authenticity & Misinformation Prevention Portal",
-    modalDescEng: "Welcome to SignalScope by Team Takniki Vibhad. This platform analyzes submitted imagery using neural forensic classification and Grad-CAM visual anomaly localization to evaluate synthetic media likelihood under SIH 2026 Problem Statement C-433.",
+    modalDescEng: "Welcome to SignalScope by Team Takniki Vibhag. This platform analyzes submitted imagery using neural forensic classification and Grad-CAM visual anomaly localization to evaluate synthetic media likelihood under SIH 2026 Problem Statement C-433.",
     modalTitleHin: "एसआईएच 2026 मीडिया प्रामाणिकता एवं भ्रामक सूचना रोकथाम पोर्टल",
     modalDescHin: "टीम तकनीकी विभाग के सिग्नलस्कोप पोर्टल में आपका स्वागत है। यह मंच एसआईएच 2026 समस्या कथन C-433 के तहत सिंथेटिक मीडिया और डीपफेक छवियों की संभावना का मूल्यांकन करने के लिए फॉरेंसिक विश्लेषण प्रदान करता है।",
     btnModalClose: "पोर्टल पर आगे बढ़ें / PROCEED TO PORTAL",
@@ -294,7 +294,7 @@ const translations = {
     thModel: "एट्रिब्यूशन आर्किटेक्चर",
     thActions: "कार्रवाई",
     btnInspect: "कलाकृति का निरीक्षण करें",
-    footerTitle: "तकनीकी विभाग • TAKNIKI VIBHAD",
+    footerTitle: "तकनीकी विभाग • TAKNIKI VIBHAG",
     footerDesc: "स्मार्ट इंडिया हैकाथॉन (एसआईएच 2026) के लिए निर्मित स्वतंत्र मीडिया फॉरेंसिक मंच। सिंथेटिक मीडिया के स्वचालित वर्गीकरण, दृश्य विसंगति स्थानीयकरण और जनरेटर एट्रिब्यूशन के लिए डिज़ाइन किया गया।",
     quickLinks: "हैकाथॉन विवरण",
     eventLabel: "कार्यक्रम:",
