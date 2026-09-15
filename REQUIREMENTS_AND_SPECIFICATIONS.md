@@ -169,7 +169,7 @@ SIGNALSCOPE/
 ---
 
 ## 5. Next Execution Steps
-1. **Data Pipeline:** Set up CIFAKE / synthetic image data ingestion script with train/val/test splits.
+1. **Data Pipeline:** Set up CIFAKE (`birdy654/cifake-real-and-ai-generated-synthetic-images`) ingestion: train on its `train/` split (10% held back for validation) and report on its `test/` split.
 2. **Model Training Pipeline:** Implement EfficientNet / ViT baseline + frequency domain feature extraction (FFT / DCT artifacts).
 3. **Bonus Modules Engine:** Implement Modules A through G in `model/`.
 4. **Web UI & API:** Build a high-performance web dashboard with drag-and-drop, batch processing, and visual heatmaps.

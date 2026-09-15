@@ -12,9 +12,10 @@
 ---
 
 ## 2. Dataset & Split Specification
-* **Training & Validation Set:** ~100k+ balanced real vs. synthetic images (CIFAKE, Stable Diffusion v1.5, SDXL, StyleGAN3).
-* **Held-Out Test Set (Organizers' Protocol):** Unseen photos AND synthetic outputs from undisclosed, unseen generator architectures (e.g., Midjourney v6, Flux.1, DALL-E 3).
-* **Data Integrity:** Strict non-overlapping split; zero training on held-out test data.
+* **Dataset:** CIFAKE (`birdy654/cifake-real-and-ai-generated-synthetic-images`): 60k REAL images from CIFAR-10 and 60k FAKE images generated with Stable Diffusion v1.4, all 32x32.
+* **Training & Validation Set:** CIFAKE `train/` (50k REAL + 50k FAKE), split 90/10 per class. Validation drives epoch selection and temperature calibration.
+* **Held-Out Test Set:** CIFAKE `test/` (10k REAL + 10k FAKE), used only for the reported metrics.
+* **Data Integrity:** CIFAKE's train and test folders are disjoint; zero training, model selection, or calibration on test data.
 
 ---
 
@@ -27,19 +28,14 @@
 
 ## 4. Performance & Evaluation Metrics
 
-| Metric | Overall Held-Out | Unseen-Generator Split (Primary) | Target Baseline |
-| :--- | :---: | :---: | :---: |
-| **ROC-AUC (Primary Metric)** | **0.968** | **0.942** | 0.820 |
-| **Macro-F1 Score** | **0.925** | **0.898** | 0.780 |
-| **Accuracy @ 0.50 Threshold** | **93.5%** | **90.4%** | 81.0% |
-| **False-Positive Rate (FPR)** | **1.8%** | **2.5%** | 5.0% |
+> Pending a training run on CIFAKE. Fill from the `test` block of `metrics.json` (it also holds the confusion matrix).
 
-### Confusion Matrix (Held-Out Test Set)
-```
-                Predicted Real    Predicted AI-Generated
-Actual Real          4,890                110           (FPR: 2.2%)
-Actual AI            185                 4,815          (TPR: 96.3%)
-```
+| Metric | CIFAKE Test Split | Target Baseline |
+| :--- | :---: | :---: |
+| **ROC-AUC (Primary Metric)** | _pending_ | 0.820 |
+| **Macro-F1 Score** | _pending_ | 0.780 |
+| **Accuracy @ 0.50 Threshold** | _pending_ | 81.0% |
+| **False-Positive Rate (FPR)** | _pending_ | 5.0% |
 
 ---
 
@@ -57,3 +53,4 @@ Actual AI            185                 4,815          (TPR: 96.3%)
 ## 6. Honest Limitations & Failure Modes
 * **Anti-Forensic Post-Processing:** Heavy gaussian smoothing combined with severe JPEG compression ($Q < 30$) can obscure high-frequency grid artifacts.
 * **Hyper-Realistic Textures:** Minimal artifacts observed on raw uncompressed Midjourney v6 photorealistic macro photography.
+* **Single-Generator Training Data:** Every CIFAKE fake comes from Stable Diffusion v1.4 at 32x32, so test-split metrics do not measure generalization to other generators or to high-resolution images.

@@ -6,7 +6,7 @@ thing fitted is the fusion layer, and it is compared against an untrained
 majority vote over the same members on the same images.
 
 Kaggle setup:
-  Add Data -> awsaf49/artifact-dataset
+  Add Data -> birdy654/cifake-real-and-ai-generated-synthetic-images
   Add Data -> Notebook Output -> the training run holding best_model.pt
   Settings -> GPU + Internet ON
 """
@@ -19,8 +19,8 @@ Kaggle setup:
 # * **Baseline:** every member votes AI if p >= 0.5, majority wins. No fitting.
 # * **Learned:** a logistic regression over the members' probabilities.
 #
-# Both are scored on the same **unseen-generator split** (`stable_diffusion` +
-# `glide`), which no member trained on and the combiner never sees during fitting.
+# Both are scored on the same sample of the **CIFAKE test split**, which the
+# combiner never sees during fitting.
 
 # %%
 import os
@@ -47,65 +47,40 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print("device:", DEVICE)
 
 N_FIT = 4000
-N_UNSEEN = 4000
+N_TEST = 4000
 BATCH = 32
 
 # %% [markdown]
 # ## 1. Splits
-# `fit` holds seen generators plus vq_diffusion; `unseen` holds stable_diffusion
-# and glide. Real images are partitioned so the two sets never share one.
+# `fit` is sampled from CIFAKE train and `test` from the official CIFAKE test
+# split, so the two sets never share an image.
 
 # %%
-ARTIFACT_ROOT = "/kaggle/input/datasets/awsaf49/artifact-dataset"
-
-folders = {}
-for name in sorted(os.listdir(ARTIFACT_ROOT)):
-    d = os.path.join(ARTIFACT_ROOT, name)
-    if os.path.isdir(d) and os.path.exists(os.path.join(d, "metadata.csv")):
-        folders[name] = d
-print(f"found {len(folders)} source folders")
-
-FACE_EXCLUDE = {
-    "ffhq", "celebahq", "metfaces", "face_synthetics", "sfhq",
-    "stylegan1", "stylegan2", "stylegan3", "star_gan", "mat",
-}
-FACE_PATH_TOKENS = ("face", "ffhq", "celeba")
-UNSEEN_GENERATORS = ["stable_diffusion", "glide"]
-
-rows = []
-for name, path in sorted(folders.items()):
-    if name.lower() in FACE_EXCLUDE:
-        continue
-    meta = pd.read_csv(os.path.join(path, "metadata.csv"))[["image_path", "target"]].copy()
-    meta = meta[~meta["image_path"].str.lower().str.contains("|".join(FACE_PATH_TOKENS), regex=True, na=False)]
-    meta["source"] = name
-    meta["label"] = (meta["target"].astype(int) != 0).astype(int)
-    meta["abspath"] = path.rstrip("/") + "/" + meta["image_path"].astype(str)
-    rows.append(meta[["abspath", "label", "source"]])
-
-catalog = pd.concat(rows, ignore_index=True)
-print("total usable images:", len(catalog))
-
-unseen_fake = catalog[catalog["source"].isin(UNSEEN_GENERATORS) & (catalog["label"] == 1)]
-fit_fake = catalog[~catalog["source"].isin(UNSEEN_GENERATORS) & (catalog["label"] == 1)]
-real_all = catalog[catalog["label"] == 0]
-
-real_shuffled = real_all.sample(frac=1.0, random_state=SEED)
-half = len(real_shuffled) // 2
-real_fit, real_unseen = real_shuffled.iloc[:half], real_shuffled.iloc[half:]
+CIFAKE_SLUG = "cifake-real-and-ai-generated-synthetic-images"
+CIFAKE_CANDIDATES = [f"/kaggle/input/datasets/birdy654/{CIFAKE_SLUG}", f"/kaggle/input/{CIFAKE_SLUG}"]
+CIFAKE_ROOT = next((p for p in CIFAKE_CANDIDATES if os.path.isdir(os.path.join(p, "train", "REAL"))), None)
+if CIFAKE_ROOT is None:
+    raise SystemExit(f"CIFAKE not found under {CIFAKE_CANDIDATES}. Confirm the dataset is attached via Add Data.")
+print("CIFAKE root:", CIFAKE_ROOT)
 
 
-def balanced(fakes, reals, n):
-    k = min(n // 2, len(fakes), len(reals))
-    return pd.concat([
-        fakes.sample(k, random_state=SEED),
-        reals.sample(k, random_state=SEED),
-    ], ignore_index=True).sample(frac=1.0, random_state=SEED).reset_index(drop=True)
+def list_split(split):
+    """One row per image in a CIFAKE split. label: 0 = REAL, 1 = FAKE."""
+    rows = []
+    for cls, label in (("REAL", 0), ("FAKE", 1)):
+        d = os.path.join(CIFAKE_ROOT, split, cls)
+        rows += [(os.path.join(d, f), label) for f in sorted(os.listdir(d))]
+    return pd.DataFrame(rows, columns=["abspath", "label"])
 
 
-fit_df = balanced(fit_fake, real_fit, N_FIT)
-unseen_df = balanced(unseen_fake, real_unseen, N_UNSEEN)
-print(f"fit set={len(fit_df)} (fake {fit_df.label.sum()})   unseen set={len(unseen_df)} (fake {unseen_df.label.sum()})")
+def balanced(df, n):
+    k = min(n // 2, *df["label"].value_counts().tolist())
+    return df.groupby("label").sample(k, random_state=SEED).sample(frac=1.0, random_state=SEED).reset_index(drop=True)
+
+
+fit_df = balanced(list_split("train"), N_FIT)
+test_df = balanced(list_split("test"), N_TEST)
+print(f"fit set={len(fit_df)} (fake {fit_df.label.sum()})   test set={len(test_df)} (fake {test_df.label.sum()})")
 
 # %% [markdown]
 # ## 2. Frozen members
@@ -175,10 +150,10 @@ def rezip_checkpoint(folder):
     return out
 
 
-# Walk /kaggle/input but prune the ArtiFact tree - its 2.5M images take forever.
+# Walk /kaggle/input but prune the CIFAKE tree - no need to list its 120k images.
 ckpt_paths = []
 for dirpath, dirnames, filenames in os.walk("/kaggle/input"):
-    dirnames[:] = [d for d in dirnames if d != "artifact-dataset"]
+    dirnames[:] = [d for d in dirnames if d != CIFAKE_SLUG]
     if "best_model.pt" in filenames:
         ckpt_paths.append(os.path.join(dirpath, "best_model.pt"))
         break
@@ -188,9 +163,9 @@ for dirpath, dirnames, filenames in os.walk("/kaggle/input"):
         break
 
 if not ckpt_paths:
-    print("Mounted inputs (excluding artifact-dataset):")
+    print("Mounted inputs (excluding CIFAKE):")
     for dirpath, dirnames, filenames in os.walk("/kaggle/input"):
-        dirnames[:] = [d for d in dirnames if d != "artifact-dataset"]
+        dirnames[:] = [d for d in dirnames if d != CIFAKE_SLUG]
         depth = dirpath.count(os.sep) - 2
         if depth <= 4:
             print("  " * depth + dirpath, filenames[:5])
@@ -271,8 +246,8 @@ def member_matrix(df, tag):
 
 X_fit = member_matrix(fit_df, "fit set")
 y_fit = fit_df["label"].values
-X_unseen = member_matrix(unseen_df, "UNSEEN set")
-y_unseen = unseen_df["label"].values
+X_test = member_matrix(test_df, "CIFAKE test set")
+y_test = test_df["label"].values
 
 # A member whose label mapping is reversed scores below chance; correct it so it
 # is not voting backwards.
@@ -281,7 +256,7 @@ for j, name in enumerate(MEMBER_NAMES):
     if auc < 0.5:
         print(f"flipping inverted member {name} (fit AUC {auc:.3f})")
         X_fit[:, j] = 1.0 - X_fit[:, j]
-        X_unseen[:, j] = 1.0 - X_unseen[:, j]
+        X_test[:, j] = 1.0 - X_test[:, j]
 
 # %% [markdown]
 # ## 4. Evaluate
@@ -306,9 +281,9 @@ def evaluate(name, y, preds, scores=None):
 
 
 # --- individual members, for reference -------------------------------------
-print("\n=== individual members on the UNSEEN split ===")
+print("\n=== individual members on the CIFAKE test split ===")
 member_metrics = {
-    n: evaluate(n, y_unseen, (X_unseen[:, j] >= 0.5).astype(int), X_unseen[:, j])
+    n: evaluate(n, y_test, (X_test[:, j] >= 0.5).astype(int), X_test[:, j])
     for j, n in enumerate(MEMBER_NAMES)
 }
 
@@ -323,24 +298,24 @@ def majority(X):
 print("\n=== BASELINE: majority vote (nothing trained) ===")
 preds_maj_fit, frac_maj_fit = majority(X_fit)
 m_maj_fit = evaluate("majority vote - fit set", y_fit, preds_maj_fit, frac_maj_fit)
-preds_maj, frac_maj = majority(X_unseen)
-m_maj_unseen = evaluate("majority vote - UNSEEN split", y_unseen, preds_maj, frac_maj)
-preds_hf, frac_hf = majority(X_unseen[:, :3])
-m_maj_hf = evaluate("majority of 3 HF only - UNSEEN split", y_unseen, preds_hf, frac_hf)
+preds_maj, frac_maj = majority(X_test)
+m_maj_test = evaluate("majority vote - CIFAKE test split", y_test, preds_maj, frac_maj)
+preds_hf, frac_hf = majority(X_test[:, :3])
+m_maj_hf = evaluate("majority of 3 HF only - CIFAKE test split", y_test, preds_hf, frac_hf)
 
 # --- learned combiner -------------------------------------------------------
 combiner = LogisticRegression(max_iter=1000, C=1.0)
 combiner.fit(X_fit, y_fit)
 p_fit = combiner.predict_proba(X_fit)[:, 1]
-p_unseen = combiner.predict_proba(X_unseen)[:, 1]
+p_test = combiner.predict_proba(X_test)[:, 1]
 
 print("\n=== LEARNED: logistic-regression combiner ===")
 m_lr_fit = evaluate("learned combiner - fit set (in-sample)", y_fit, (p_fit >= 0.5).astype(int), p_fit)
-m_lr_unseen = evaluate("learned combiner - UNSEEN split", y_unseen, (p_unseen >= 0.5).astype(int), p_unseen)
+m_lr_test = evaluate("learned combiner - CIFAKE test split", y_test, (p_test >= 0.5).astype(int), p_test)
 
 LOW_FPR_THRESHOLD = float(np.quantile(p_fit[y_fit == 0], 0.95))
 m_lr_lowfpr = evaluate(f"learned combiner @ 5% FPR (t={LOW_FPR_THRESHOLD:.3f})",
-                       y_unseen, (p_unseen >= LOW_FPR_THRESHOLD).astype(int), p_unseen)
+                       y_test, (p_test >= LOW_FPR_THRESHOLD).astype(int), p_test)
 
 print("\nlearned weights:")
 for n, w in zip(MEMBER_NAMES, combiner.coef_[0]):
@@ -349,13 +324,13 @@ print(f"  {'intercept':42s} {combiner.intercept_[0]:+.4f}")
 
 # --- side by side -----------------------------------------------------------
 print("\n" + "=" * 78)
-print("SIDE BY SIDE on the UNSEEN-generator split")
+print("SIDE BY SIDE on the CIFAKE test split")
 print("=" * 78)
 print(f"{'method':44s} {'AUC':>7s} {'acc':>7s} {'F1':>7s} {'FPR':>7s}")
 for label, m in [
-    ("BASELINE majority vote (untrained)", m_maj_unseen),
+    ("BASELINE majority vote (untrained)", m_maj_test),
     ("BASELINE majority of 3 HF (untrained)", m_maj_hf),
-    ("LEARNED logistic combiner", m_lr_unseen),
+    ("LEARNED logistic combiner", m_lr_test),
     ("LEARNED combiner @ 5% FPR", m_lr_lowfpr),
 ]:
     print(f"{label:44s} {m.get('auc', float('nan')):7.4f} {m['accuracy']*100:6.1f}% "
@@ -367,22 +342,22 @@ for label, m in [
 # %%
 spec = {
     "note": "No classifier trained or retrained. Members frozen; only the fusion layer is fitted.",
+    "dataset": f"CIFAKE (birdy654/{CIFAKE_SLUG})",
     "members": MEMBER_NAMES,
     "dual_stream_checkpoint": os.path.basename(ckpt_paths[0]),
-    "held_out_generators": UNSEEN_GENERATORS,
     "fit_size": int(len(fit_df)),
-    "unseen_size": int(len(unseen_df)),
+    "test_size": int(len(test_df)),
     "tie_rule": "even split resolves to real",
-    "baseline_majority": {"fit": m_maj_fit, "unseen": m_maj_unseen, "unseen_3hf": m_maj_hf},
+    "baseline_majority": {"fit": m_maj_fit, "test": m_maj_test, "test_3hf": m_maj_hf},
     "learned_combiner": {
         "coefficients": combiner.coef_[0].tolist(),
         "intercept": float(combiner.intercept_[0]),
         "low_fpr_threshold": LOW_FPR_THRESHOLD,
         "fit_in_sample": m_lr_fit,
-        "unseen": m_lr_unseen,
-        "unseen_at_5pct_fpr": m_lr_lowfpr,
+        "test": m_lr_test,
+        "test_at_5pct_fpr": m_lr_lowfpr,
     },
-    "individual_members_unseen": member_metrics,
+    "individual_members_test": member_metrics,
 }
 
 with open("/kaggle/working/ensemble_vs_majority.json", "w") as f:

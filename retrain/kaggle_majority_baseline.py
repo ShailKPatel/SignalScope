@@ -6,7 +6,7 @@ casts one real/AI vote and the majority wins. This establishes the reference
 number that any learned fusion has to beat.
 
 Kaggle setup:
-  Add Data -> awsaf49/artifact-dataset
+  Add Data -> birdy654/cifake-real-and-ai-generated-synthetic-images
   Add Data -> Notebook Output -> the training run holding best_model.pt
   Settings -> GPU + Internet ON
 """
@@ -15,8 +15,9 @@ Kaggle setup:
 # # Majority-Vote Baseline
 # Frozen members, one vote each, majority wins.
 #
-# Evaluated on the **unseen-generator split** (`stable_diffusion` + `glide`) that
-# no member was trained on, plus a seen-generator sample for context.
+# Evaluated on a balanced sample of the **CIFAKE test split**, which the
+# dual-stream member never saw during training, plus a CIFAKE train sample for
+# context and for catching members whose labels are inverted.
 
 # %%
 import os
@@ -41,64 +42,39 @@ torch.manual_seed(SEED)
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print("device:", DEVICE)
 
-N_UNSEEN = 4000
-N_SEEN = 2000
+N_TEST = 4000
+N_REF = 2000
 BATCH = 32
 
 # %% [markdown]
-# ## 1. Rebuild the same splits
+# ## 1. Sample CIFAKE
 
 # %%
-ARTIFACT_ROOT = "/kaggle/input/datasets/awsaf49/artifact-dataset"
-
-folders = {}
-for name in sorted(os.listdir(ARTIFACT_ROOT)):
-    d = os.path.join(ARTIFACT_ROOT, name)
-    if os.path.isdir(d) and os.path.exists(os.path.join(d, "metadata.csv")):
-        folders[name] = d
-print(f"found {len(folders)} source folders")
-
-FACE_EXCLUDE = {
-    "ffhq", "celebahq", "metfaces", "face_synthetics", "sfhq",
-    "stylegan1", "stylegan2", "stylegan3", "star_gan", "mat",
-}
-FACE_PATH_TOKENS = ("face", "ffhq", "celeba")
-UNSEEN_GENERATORS = ["stable_diffusion", "glide"]
-
-rows = []
-for name, path in sorted(folders.items()):
-    if name.lower() in FACE_EXCLUDE:
-        continue
-    meta = pd.read_csv(os.path.join(path, "metadata.csv"))[["image_path", "target"]].copy()
-    meta = meta[~meta["image_path"].str.lower().str.contains("|".join(FACE_PATH_TOKENS), regex=True, na=False)]
-    meta["source"] = name
-    meta["label"] = (meta["target"].astype(int) != 0).astype(int)
-    meta["abspath"] = path.rstrip("/") + "/" + meta["image_path"].astype(str)
-    rows.append(meta[["abspath", "label", "source"]])
-
-catalog = pd.concat(rows, ignore_index=True)
-print("total usable images:", len(catalog))
-
-unseen_fake = catalog[catalog["source"].isin(UNSEEN_GENERATORS) & (catalog["label"] == 1)]
-seen_fake = catalog[~catalog["source"].isin(UNSEEN_GENERATORS) & (catalog["label"] == 1)]
-real_all = catalog[catalog["label"] == 0]
-
-real_shuffled = real_all.sample(frac=1.0, random_state=SEED)
-split = len(real_shuffled) // 2
-real_a, real_b = real_shuffled.iloc[:split], real_shuffled.iloc[split:]
+CIFAKE_SLUG = "cifake-real-and-ai-generated-synthetic-images"
+CIFAKE_CANDIDATES = [f"/kaggle/input/datasets/birdy654/{CIFAKE_SLUG}", f"/kaggle/input/{CIFAKE_SLUG}"]
+CIFAKE_ROOT = next((p for p in CIFAKE_CANDIDATES if os.path.isdir(os.path.join(p, "train", "REAL"))), None)
+if CIFAKE_ROOT is None:
+    raise SystemExit(f"CIFAKE not found under {CIFAKE_CANDIDATES}. Confirm the dataset is attached via Add Data.")
+print("CIFAKE root:", CIFAKE_ROOT)
 
 
-def balanced(fakes, reals, n):
-    half = min(n // 2, len(fakes), len(reals))
-    return pd.concat([
-        fakes.sample(half, random_state=SEED),
-        reals.sample(half, random_state=SEED),
-    ], ignore_index=True).sample(frac=1.0, random_state=SEED).reset_index(drop=True)
+def list_split(split):
+    """One row per image in a CIFAKE split. label: 0 = REAL, 1 = FAKE."""
+    rows = []
+    for cls, label in (("REAL", 0), ("FAKE", 1)):
+        d = os.path.join(CIFAKE_ROOT, split, cls)
+        rows += [(os.path.join(d, f), label) for f in sorted(os.listdir(d))]
+    return pd.DataFrame(rows, columns=["abspath", "label"])
 
 
-unseen_df = balanced(unseen_fake, real_a, N_UNSEEN)
-seen_df = balanced(seen_fake, real_b, N_SEEN)
-print(f"unseen set={len(unseen_df)} (fake {unseen_df.label.sum()})   seen set={len(seen_df)} (fake {seen_df.label.sum()})")
+def balanced(df, n):
+    k = min(n // 2, *df["label"].value_counts().tolist())
+    return df.groupby("label").sample(k, random_state=SEED).sample(frac=1.0, random_state=SEED).reset_index(drop=True)
+
+
+ref_df = balanced(list_split("train"), N_REF)
+test_df = balanced(list_split("test"), N_TEST)
+print(f"train sample={len(ref_df)} (fake {ref_df.label.sum()})   test sample={len(test_df)} (fake {test_df.label.sum()})")
 
 # %% [markdown]
 # ## 2. Load the frozen members
@@ -227,19 +203,19 @@ def member_matrix(df, tag):
     return np.column_stack(cols)
 
 
-X_seen = member_matrix(seen_df, "seen generators")
-y_seen = seen_df["label"].values
-X_unseen = member_matrix(unseen_df, "UNSEEN generators")
-y_unseen = unseen_df["label"].values
+X_ref = member_matrix(ref_df, "CIFAKE train sample")
+y_ref = ref_df["label"].values
+X_test = member_matrix(test_df, "CIFAKE test sample")
+y_test = test_df["label"].values
 
 # A member whose label mapping is reversed scores below chance; correct it here
-# so the vote is not being cast backwards.
+# so the vote is not being cast backwards. Decided on train so test stays untouched.
 for j, name in enumerate(MEMBER_NAMES):
-    auc = roc_auc_score(y_seen, X_seen[:, j])
+    auc = roc_auc_score(y_ref, X_ref[:, j])
     if auc < 0.5:
-        print(f"flipping inverted member {name} (seen AUC {auc:.3f})")
-        X_seen[:, j] = 1.0 - X_seen[:, j]
-        X_unseen[:, j] = 1.0 - X_unseen[:, j]
+        print(f"flipping inverted member {name} (train-sample AUC {auc:.3f})")
+        X_ref[:, j] = 1.0 - X_ref[:, j]
+        X_test[:, j] = 1.0 - X_test[:, j]
 
 # %% [markdown]
 # ## 4. Majority vote
@@ -278,7 +254,7 @@ def majority(X, tie_breaks_real=True):
 
 
 results = {}
-for tag, X, y in [("SEEN generators", X_seen, y_seen), ("UNSEEN generators", X_unseen, y_unseen)]:
+for tag, X, y in [("CIFAKE train sample", X_ref, y_ref), ("CIFAKE test", X_test, y_test)]:
     print(f"\n=== {tag} ===")
     per_member = {}
     for j, name in enumerate(MEMBER_NAMES):
@@ -305,11 +281,11 @@ for tag, X, y in [("SEEN generators", X_seen, y_seen), ("UNSEEN generators", X_u
 # %%
 baseline = {
     "note": "No training performed. All members frozen; simple majority vote.",
+    "dataset": f"CIFAKE (birdy654/{CIFAKE_SLUG})",
     "members": MEMBER_NAMES,
     "tie_rule": "even split resolves to real",
-    "held_out_generators": UNSEEN_GENERATORS,
-    "seen_set_size": int(len(seen_df)),
-    "unseen_set_size": int(len(unseen_df)),
+    "train_sample_size": int(len(ref_df)),
+    "test_set_size": int(len(test_df)),
     "dual_stream_checkpoint": os.path.basename(ckpt_paths[0]),
     "results": results,
 }
@@ -318,5 +294,5 @@ with open("/kaggle/working/majority_baseline.json", "w") as f:
     json.dump(baseline, f, indent=2)
 
 print("\nSaved /kaggle/working/majority_baseline.json")
-print("\nHeadline baseline (unseen split):",
-      f"majority-vote accuracy {results['UNSEEN generators']['majority_4_tie_real']['accuracy']*100:.1f}%")
+print("\nHeadline baseline (CIFAKE test split):",
+      f"majority-vote accuracy {results['CIFAKE test']['majority_4_tie_real']['accuracy']*100:.1f}%")

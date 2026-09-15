@@ -56,6 +56,12 @@ saved_models/
 *.npz
 *.parquet
 trained-v*/*.zip
+
+# CIFAKE dataset downloads & Colab bundles (retrain/data/ is covered by data/ above)
+cifake-real-and-ai-generated-synthetic-images/
+*cifake*.zip
+signalscope_colab.zip
+
 runs/
 wandb/
 .tensorboard/
