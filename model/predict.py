@@ -113,6 +113,17 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
         verdict_label = "likely AI-generated" if is_ai_generated else "likely real"
         evidence_text = f"Evaluated via {detection_level} (Confidence Score: {format_probability(confidence)})."
 
+    # Confident member dissent marks the pixel verdict inconclusive. Additive field only:
+    # is_ai_generated and confidence_score are unchanged, so existing clients render as before.
+    disagreement = ensemble_info.get("member_disagreement") or {}
+    inconclusive = bool(disagreement.get("inconclusive"))
+    dissenters = disagreement.get("dissenting_members") or []
+    inconclusive_reason = (
+        f"Detectors disagree: {', '.join(dissenters)} confidently "
+        f"{'contradicts' if len(dissenters) == 1 else 'contradict'} the stacked verdict, "
+        f"which was fit on CIFAKE only. Treat as unverified."
+    ) if inconclusive else None
+
     # Operating point comes from the stacker's CIFAKE test metrics; absent in majority-vote fallback.
     test_metrics = (ensemble_info.get("stacking") or {}).get("cifake_test_metrics") or {}
 
@@ -143,6 +154,8 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
             "label": verdict_label,
             "is_ai_generated": is_ai_generated,
             "confidence_score": confidence,
+            "inconclusive": inconclusive,
+            "inconclusive_reason": inconclusive_reason,
             "detection_level": detection_level,
             "metadata_evidence": evidence_text if is_level_1_ai else None,
             "matched_generator": l1.get("matched_generator") if is_level_1_ai else None,
