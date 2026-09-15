@@ -462,6 +462,22 @@ def _fuse(scored, n_members):
     return score, ai_votes, n, None, f"Hard Majority Vote fallback ({reason}; ties resolve to real)"
 
 
+# A member this far from 0.5 against the fused verdict counts as a confident dissent.
+DISSENT_MARGIN = 0.4
+
+
+def member_disagreement(scored, is_ai):
+    """
+    Flags members that confidently contradict the fused verdict (P(AI) >= 0.9 on a real
+    verdict, <= 0.1 on an AI verdict). The stacker was fit on CIFAKE, where the dual-stream
+    member dominates; off that domain a confident dissent means the verdict is not reliable.
+    """
+    dissenters = [cfg["id"] for cfg, p, _ in scored
+                  if (p >= 0.5) != is_ai and abs(p - 0.5) >= DISSENT_MARGIN]
+    return {"inconclusive": bool(dissenters), "dissenting_members": dissenters,
+            "dissent_margin": DISSENT_MARGIN}
+
+
 def score_image(pil_img):
     """Ensemble score only (no saliency), same fusion as run_ensemble_inference. None if no member loads."""
     all_scored = score_members(pil_img, with_cam=False)
@@ -525,6 +541,7 @@ def run_ensemble_inference(pil_img):
         "mean_ai_probability": round(float(np.mean([p for _, p, _ in scored])), 4),
         "total_inference_ms": round((time.time() - t0) * 1000, 2),
         "family_models": model_results,
+        "member_disagreement": member_disagreement(scored, score >= 0.5),
         "saliency_check": saliency_check,
     }
     return round(float(score), 4), saliency_map, breakdown
