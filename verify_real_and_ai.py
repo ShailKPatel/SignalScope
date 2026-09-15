@@ -11,8 +11,8 @@ from model.predict import predict_image
 def main():
     os.makedirs("test_images", exist_ok=True)
 
-    # 1. Real Photograph (Albert Einstein 1921 portrait from Wikimedia Commons)
-    real_path = "test_images/real_einstein_photo.jpg"
+    # 1. Real photograph: CIFAKE test split, REAL class (CIFAR-10), no people
+    real_path = "test_images/cifake_real_0.png"
 
     # 2. Path to AI Image sample (e.g., test_images/gemini_imagen3_sample.png)
     ai_path = "test_images/gemini_imagen3_sample.png"

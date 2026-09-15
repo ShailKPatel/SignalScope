@@ -60,11 +60,11 @@ def test_level_2_deep_vision_classifier():
     print("      SIGNAL SCOPE - LEVEL 2 DEEP VISION MODEL CLASSIFIER TEST")
     print("=" * 70)
     
-    real_path = "test_images/real_einstein_photo.jpg"
-    print(f"\nTesting Level 2 Evaluation with Real Photograph ({real_path})...")
+    real_path = "test_images/cifake_real_0.png"
+    print(f"\nTesting Level 2 Evaluation with CIFAKE REAL sample ({real_path})...")
     with open(real_path, "rb") as f:
         t0 = time.time()
-        res_real = client.post("/api/predict", files={"file": ("real_einstein_photo.jpg", f, "image/jpeg")}).json()
+        res_real = client.post("/api/predict", files={"file": ("cifake_real_0.png", f, "image/png")}).json()
         dt = round((time.time() - t0) * 1000, 2)
         
     print(f"  Inference Time:      {dt} ms")

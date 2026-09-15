@@ -32,8 +32,8 @@ def test_ensemble_3_families_standalone():
     print("      SIGNAL SCOPE - 3-FAMILY MULTI-MODEL EXPERT ENSEMBLE TEST")
     print("=" * 85)
 
-    real_img_path = "test_images/real_einstein_photo.jpg"
-    print(f"\nEvaluating 3-Family Ensemble on Real Photo ({real_img_path})...")
+    real_img_path = "test_images/cifake_real_0.png"
+    print(f"\nEvaluating 3-Family Ensemble on CIFAKE REAL sample ({real_img_path})...")
     img = Image.open(real_img_path).convert("RGB")
 
     t0 = time.time()
@@ -93,10 +93,10 @@ def test_full_pipeline_3_family_ensemble():
     print("      SIGNAL SCOPE - FULL PIPELINE LEVEL 2 ENSEMBLE TEST")
     print("=" * 85)
 
-    real_img_path = "test_images/real_einstein_photo.jpg"
+    real_img_path = "test_images/cifake_real_0.png"
     print(f"\nTesting POST /api/predict Level 2 3-Family Ensemble Classification...")
     with open(real_img_path, "rb") as f:
-        res = client.post("/api/predict", files={"file": ("real_einstein_photo.jpg", f, "image/jpeg")}).json()
+        res = client.post("/api/predict", files={"file": ("cifake_real_0.png", f, "image/png")}).json()
 
     verdict = res.get("verdict", {})
     print(f"  Detection Level:   {verdict.get('detection_level')}")
@@ -117,14 +117,14 @@ def test_websocket_3_family_ensemble():
     print("      SIGNAL SCOPE - WEBSOCKET STREAMING ENSEMBLE VERIFICATION")
     print("=" * 85)
 
-    fpath = "test_images/real_einstein_photo.jpg"
+    fpath = "test_images/cifake_real_0.png"
     with open(fpath, "rb") as f:
         b64_data = base64.b64encode(f.read()).decode("utf-8")
 
     payload = {
-        "filename": "real_einstein_photo.jpg",
-        "image_b64": f"data:image/jpeg;base64,{b64_data}",
-        "caption": "Historical photograph portrait"
+        "filename": "cifake_real_0.png",
+        "image_b64": f"data:image/png;base64,{b64_data}",
+        "caption": "A small photo from the CIFAKE test split"
     }
 
     print("Connecting to WebSocket /ws/analyze...")
