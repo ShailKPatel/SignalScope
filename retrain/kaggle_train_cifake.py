@@ -1,16 +1,16 @@
 """
-SignalScope - ArtiFact training pipeline for Kaggle GPU notebooks.
+SignalScope - CIFAKE training pipeline for Kaggle GPU notebooks.
 
-Attach the dataset `awsaf49/artifact-dataset` and enable a GPU accelerator,
-then run top to bottom. Produces retrain/checkpoints/best_model.pt in the
-format model/predict.py expects.
+Attach the dataset `birdy654/cifake-real-and-ai-generated-synthetic-images` and
+enable a GPU accelerator, then run top to bottom. Produces
+retrain/checkpoints/best_model.pt in the format model/predict.py expects.
 """
 
 # %% [markdown]
 # # SignalScope - Real vs AI-Generated Detector
-# Dual-stream (spatial + FFT) training on the ArtiFact dataset.
+# Dual-stream (spatial + FFT) training on the CIFAKE dataset.
 #
-# **Before running:** Add Data -> search `artifact-dataset` (awsaf49) -> Add.
+# **Before running:** Add Data -> search `cifake-real-and-ai-generated-synthetic-images` (birdy654) -> Add.
 # Then Settings -> Accelerator -> GPU T4 x2 or P100.
 
 # %%
@@ -41,193 +41,75 @@ if DEVICE == "cuda":
     print("gpu:", torch.cuda.get_device_name(0))
 
 # %% [markdown]
-# ## 1. Discover the dataset layout
-# ArtiFact ships one folder per real source / generator, each with a metadata.csv.
-# Folder names vary, so we discover rather than hardcode.
+# ## 1. Locate the dataset
+# CIFAKE ships `train/{REAL,FAKE}` (50k + 50k) and `test/{REAL,FAKE}` (10k + 10k).
+# REAL images come from CIFAR-10; FAKE images were generated with Stable Diffusion v1.4.
+# Every image is 32x32.
 
 # %%
-ARTIFACT_ROOT = "/kaggle/input/datasets/awsaf49/artifact-dataset"
+CIFAKE_SLUG = "cifake-real-and-ai-generated-synthetic-images"
+# Kaggle mounts attached datasets under either path depending on the notebook version.
+CIFAKE_CANDIDATES = [f"/kaggle/input/datasets/birdy654/{CIFAKE_SLUG}", f"/kaggle/input/{CIFAKE_SLUG}"]
+CIFAKE_ROOT = next((p for p in CIFAKE_CANDIDATES if os.path.isdir(os.path.join(p, "train", "REAL"))), None)
+if CIFAKE_ROOT is None:
+    raise SystemExit(f"CIFAKE not found under {CIFAKE_CANDIDATES}. Confirm the dataset is attached via Add Data.")
+print("CIFAKE root:", CIFAKE_ROOT)
 
-# Probe the 33 source directories directly. os.walk over /kaggle/input would
-# enumerate all 2.5M images on a slow network mount and take tens of minutes.
-folders = {}
-for name in sorted(os.listdir(ARTIFACT_ROOT)):
-    d = os.path.join(ARTIFACT_ROOT, name)
-    if os.path.isdir(d) and os.path.exists(os.path.join(d, "metadata.csv")):
-        folders[name] = d
 
-print(f"found {len(folders)} source folders:")
-for name in sorted(folders):
-    print(" ", name)
+def list_split(split):
+    """One row per image in a CIFAKE split. label: 0 = REAL, 1 = FAKE."""
+    rows = []
+    for cls, label in (("REAL", 0), ("FAKE", 1)):
+        d = os.path.join(CIFAKE_ROOT, split, cls)
+        rows += [(os.path.join(d, f), label) for f in sorted(os.listdir(d))]
+    return pd.DataFrame(rows, columns=["abspath", "label"])
 
-if not folders:
-    raise SystemExit(
-        f"No metadata.csv found under {ARTIFACT_ROOT}. "
-        "Confirm the artifact-dataset is attached via Add Data."
-    )
 
-# %% [markdown]
-# ## 2. Ethics filter + split design
-#
-# The problem statement disqualifies work involving real, identifiable individuals,
-# so every face-derived source and generator is dropped before sampling.
-#
-# The unseen-generator split holds two diffusion generators out of training
-# entirely - that split is the primary ranking metric and the first tie-break.
-
-# %%
-# Sources that are entirely face data.
-FACE_EXCLUDE = {
-    "ffhq", "celebahq", "metfaces", "face_synthetics", "sfhq",
-    "stylegan1", "stylegan2", "stylegan3", "star_gan", "mat",
-}
-
-# Face subsets also hide inside non-face folders - stable_diffusion ships
-# "stable-face/...", taming_transformer ships "tt-ffhq/..." - so the same rule
-# must run against every image path, not just the folder name.
-FACE_PATH_TOKENS = ("face", "ffhq", "celeba")
-
-TARGET_PER_CLASS = 50_000
-VAL_FRACTION = 0.10
-
-rows = []
-for name, path in sorted(folders.items()):
-    if name.lower() in FACE_EXCLUDE:
-        print(f"excluded folder (faces): {name}")
-        continue
-
-    meta = pd.read_csv(os.path.join(path, "metadata.csv"))[["image_path", "target"]].copy()
-
-    face_mask = meta["image_path"].str.lower().str.contains(
-        "|".join(FACE_PATH_TOKENS), regex=True, na=False
-    )
-    dropped = int(face_mask.sum())
-    meta = meta[~face_mask]
-
-    meta["source"] = name
-    # target is a generator-family code: 0 = real, each nonzero value a family.
-    meta["generator"] = meta["target"].astype(int)
-    meta["label"] = (meta["generator"] != 0).astype(int)
-    meta["abspath"] = path.rstrip("/") + "/" + meta["image_path"].astype(str)
-
-    rows.append(meta[["abspath", "label", "generator", "source"]])
-    print(f"kept {name}: {len(meta)}" + (f"  (dropped {dropped} face images)" if dropped else ""))
-
-catalog = pd.concat(rows, ignore_index=True)
-
-print("\ntotal usable images:", len(catalog))
-print("\nreal vs fake:")
-print(catalog["label"].value_counts().rename({0: "real", 1: "fake"}).to_string())
-print("\nper source (count, fake_ratio):")
-print(catalog.groupby("source")["label"].agg(["count", "mean"]).to_string())
+train_pool = list_split("train")
+test_df = list_split("test")
+for name, df in (("train", train_pool), ("test", test_df)):
+    print(name, len(df), df["label"].value_counts().rename({0: "real", 1: "fake"}).to_dict())
 
 # The Dataset falls back to a blank image on read errors, which would silently
 # mask a wrong path join across the whole run. Fail loudly here instead.
-missing = [p for p in catalog.sample(30, random_state=SEED)["abspath"] if not os.path.exists(p)]
+missing = [p for p in train_pool.sample(30, random_state=SEED)["abspath"] if not os.path.exists(p)]
 assert not missing, f"broken abspath join, examples: {missing[:3]}"
 print("\npath spot-check OK")
 
+# %% [markdown]
+# ## 2. Split design
+#
+# The official CIFAKE test split is the held-out evaluation set. It is never used
+# for training, epoch selection or calibration. Validation - which picks the best
+# epoch and fits the temperature - is a stratified 10% slice of CIFAKE train.
+#
+# CIFAKE is built from CIFAR-10 objects and scenes, so there are no identifiable
+# people to filter out.
+
 # %%
-# Hold out whole diffusion generators so the unseen-split AUC measures real
-# generalisation. Chosen from what survived the face filter, since a folder can
-# shrink drastically once its face subsets are removed.
-PREFERRED_UNSEEN = ["stable_diffusion", "glide", "vq_diffusion", "latent_diffusion"]
-MIN_UNSEEN_IMAGES = 2000
+VAL_FRACTION = 0.10
 
-fake_counts = catalog[catalog["label"] == 1].groupby("source").size()
-UNSEEN_GENERATORS = [g for g in PREFERRED_UNSEEN if fake_counts.get(g, 0) >= MIN_UNSEEN_IMAGES][:2]
-if not UNSEEN_GENERATORS:
-    raise SystemExit(f"No generator has >= {MIN_UNSEEN_IMAGES} images post-filter: {fake_counts.to_dict()}")
-print("held-out generators:", UNSEEN_GENERATORS)
+val_df = train_pool.groupby("label").sample(frac=VAL_FRACTION, random_state=SEED)
+train_df = train_pool.drop(index=val_df.index).sample(frac=1.0, random_state=SEED).reset_index(drop=True)
+val_df = val_df.reset_index(drop=True)
 
-# A third generator, also never trained on, used purely to choose the best epoch.
-# Selecting on the seen-generator validation set optimises for the thing that
-# does not transfer, and the reported unseen split must stay untouched.
-DEV_GENERATOR = next(
-    (g for g in ["vq_diffusion", "latent_diffusion", "big_gan"]
-     if g not in UNSEEN_GENERATORS and fake_counts.get(g, 0) >= MIN_UNSEEN_IMAGES),
-    None,
-)
-print("model-selection generator:", DEV_GENERATOR)
-
-catalog["unseen"] = catalog["source"].isin(UNSEEN_GENERATORS)
-catalog["dev"] = catalog["source"] == DEV_GENERATOR
-
-unseen_pool = catalog[catalog["unseen"] & (catalog["label"] == 1)]
-dev_pool = catalog[catalog["dev"] & (catalog["label"] == 1)]
-seen_pool = catalog[~catalog["unseen"] & ~catalog["dev"]]
-
-real_pool = seen_pool[seen_pool["label"] == 0]
-fake_pool = seen_pool[seen_pool["label"] == 1]
-
-print(f"real available: {len(real_pool)}  fake available: {len(fake_pool)}  unseen fake: {len(unseen_pool)}")
-
-
-def sample_balanced(pool, n):
-    """Spread the sample evenly across sources so no single source dominates.
-
-    Keeps the original catalog index so sampled rows can be excluded from the
-    held-out split later - resetting it here would silently leak train images
-    into the test set.
-    """
-    sources = pool["source"].unique()
-    per_source = max(1, n // len(sources))
-    picked = [
-        grp.sample(min(per_source, len(grp)), random_state=SEED)
-        for _, grp in pool.groupby("source")
-    ]
-    out = pd.concat(picked)
-    if len(out) > n:
-        out = out.sample(n, random_state=SEED)
-    return out
-
-
-real_sample = sample_balanced(real_pool, TARGET_PER_CLASS)
-fake_sample = sample_balanced(fake_pool, TARGET_PER_CLASS)
-print(f"sampled real={len(real_sample)} fake={len(fake_sample)}")
-
-# Reserve held-out real images BEFORE shuffling, using the preserved index, then
-# split them so the dev and unseen sets never share a real image either.
-leftover_real = real_pool.drop(index=real_sample.index, errors="ignore")
-assert len(leftover_real.index.intersection(real_sample.index)) == 0, "real leakage into held-out splits"
-
-leftover_real = leftover_real.sample(frac=1.0, random_state=SEED)
-half = len(leftover_real) // 2
-dev_real, unseen_real = leftover_real.iloc[:half], leftover_real.iloc[half:]
-
-trainval = pd.concat([real_sample, fake_sample]).sample(frac=1.0, random_state=SEED).reset_index(drop=True)
-
-n_val = int(len(trainval) * VAL_FRACTION)
-val_df = trainval.iloc[:n_val].reset_index(drop=True)
-train_df = trainval.iloc[n_val:].reset_index(drop=True)
-
-
-def build_holdout(fake_rows, real_rows, cap=5000):
-    n = min(len(fake_rows), cap, len(real_rows))
-    if n == 0:
-        raise SystemExit("No held-out images available - check generator names.")
-    return pd.concat([
-        fake_rows.sample(n, random_state=SEED),
-        real_rows.sample(n, random_state=SEED),
-    ], ignore_index=True)
-
-
-unseen_test = build_holdout(unseen_pool, unseen_real)
-dev_test = build_holdout(dev_pool, dev_real, cap=3000)
-
-print(f"train={len(train_df)}  val={len(val_df)}  dev={len(dev_test)}  unseen_test={len(unseen_test)}")
-print("held-out generators:", sorted(unseen_pool["source"].unique()))
+assert not set(train_df["abspath"]) & set(val_df["abspath"]), "train/val leakage"
+print(f"train={len(train_df)}  val={len(val_df)}  test={len(test_df)}")
 
 # %% [markdown]
 # ## 3. Augmentation
 #
-# Every ArtiFact image is 200x200 and JPEG-compressed. Without randomising the
-# compression and scale, the model learns that fingerprint instead of the
-# generation artifacts and collapses on out-of-distribution inputs.
+# CIFAKE's REAL and FAKE images went through different encoding pipelines.
+# Randomising JPEG compression keeps the model from learning that fingerprint
+# instead of the generation artifacts.
+#
+# Training stays at the native 32x32: upsampling would interpolate away the
+# high-frequency fingerprints the FFT branch relies on. The checkpoint records
+# native_size so inference resizes inputs down to the same resolution.
 
 # %%
 class RandomJPEG:
-    def __init__(self, qmin=30, qmax=95, p=0.7):
+    def __init__(self, qmin=50, qmax=95, p=0.5):
         self.qmin, self.qmax, self.p = qmin, qmax, p
 
     def __call__(self, img):
@@ -239,34 +121,17 @@ class RandomJPEG:
         return Image.open(buf).convert("RGB")
 
 
-class RandomRescale:
-    def __init__(self, sizes=(128, 160, 200, 256, 320), p=0.5):
-        self.sizes, self.p = sizes, p
-
-    def __call__(self, img):
-        if random.random() > self.p:
-            return img
-        s = random.choice(self.sizes)
-        return img.resize((s, s), Image.BICUBIC)
-
-
-# Source images are 200x200. Upsampling them to 224 interpolates away the
-# high-frequency generator fingerprints the FFT branch relies on, so crop at
-# native resolution instead - Resize(200) is a no-op unless augmentation
-# already rescaled the image.
-IMG_SIZE = 192
-NATIVE = 200
+IMG_SIZE = 32
+NATIVE = 32
 NORM = T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 train_tf = T.Compose([
-    RandomJPEG(qmin=30, qmax=95, p=0.8),
-    RandomRescale(sizes=(160, 200, 224, 256), p=0.4),
+    RandomJPEG(qmin=50, qmax=95, p=0.5),
     T.Resize(NATIVE),
-    T.RandomCrop(IMG_SIZE),
+    T.RandomCrop(IMG_SIZE, padding=4, padding_mode="reflect"),
     T.RandomHorizontalFlip(),
-    T.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.10),
+    T.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
     T.ToTensor(),
-    T.RandomApply([T.GaussianBlur(3, sigma=(0.1, 2.0))], p=0.35),
     NORM,
 ])
 
@@ -278,7 +143,7 @@ eval_tf = T.Compose([
 ])
 
 
-class ArtifactDataset(Dataset):
+class CIFAKEDataset(Dataset):
     def __init__(self, df, transform):
         self.df = df.reset_index(drop=True)
         self.transform = transform
@@ -295,17 +160,15 @@ class ArtifactDataset(Dataset):
         return self.transform(img), torch.tensor([float(row["label"])])
 
 
-BATCH = 64
+BATCH = 256
 WORKERS = 2
 
-train_loader = DataLoader(ArtifactDataset(train_df, train_tf), batch_size=BATCH,
+train_loader = DataLoader(CIFAKEDataset(train_df, train_tf), batch_size=BATCH,
                           shuffle=True, num_workers=WORKERS, pin_memory=True, drop_last=True)
-val_loader = DataLoader(ArtifactDataset(val_df, eval_tf), batch_size=BATCH,
+val_loader = DataLoader(CIFAKEDataset(val_df, eval_tf), batch_size=BATCH,
                         shuffle=False, num_workers=WORKERS, pin_memory=True)
-dev_loader = DataLoader(ArtifactDataset(dev_test, eval_tf), batch_size=BATCH,
-                        shuffle=False, num_workers=WORKERS, pin_memory=True)
-unseen_loader = DataLoader(ArtifactDataset(unseen_test, eval_tf), batch_size=BATCH,
-                           shuffle=False, num_workers=WORKERS, pin_memory=True)
+test_loader = DataLoader(CIFAKEDataset(test_df, eval_tf), batch_size=BATCH,
+                         shuffle=False, num_workers=WORKERS, pin_memory=True)
 
 # %% [markdown]
 # ## 4. Model
@@ -441,25 +304,22 @@ for epoch in range(1, EPOCHS + 1):
 
         running += loss.item() * imgs.size(0)
         seen += imgs.size(0)
-        if step % 200 == 0:
+        if step % 100 == 0:
             print(f"  epoch {epoch} step {step}/{len(train_loader)} loss {running/seen:.4f}")
 
     scheduler.step()
     y_val, p_val, _ = evaluate(val_loader)
     val_auc = roc_auc_score(y_val, p_val)
-    y_dev, p_dev, _ = evaluate(dev_loader)
-    dev_auc = roc_auc_score(y_dev, p_dev)
-    print(f"epoch {epoch}: train_loss={running/seen:.4f}  val_auc={val_auc:.4f}  dev_auc={dev_auc:.4f}")
+    print(f"epoch {epoch}: train_loss={running/seen:.4f}  val_auc={val_auc:.4f}")
 
-    # Select on the held-out generator, not the seen-generator validation set.
-    if dev_auc > best_auc:
-        best_auc = dev_auc
+    # Select on validation only - the CIFAKE test split stays untouched until the final report.
+    if val_auc > best_auc:
+        best_auc = val_auc
         torch.save(
-            {"model_state_dict": model.state_dict(), "spatial_backbone": BACKBONE,
-             "val_auc": val_auc, "dev_auc": dev_auc},
+            {"model_state_dict": model.state_dict(), "spatial_backbone": BACKBONE, "val_auc": val_auc},
             os.path.join(CKPT_DIR, "best_model.pt"),
         )
-        print(f"  saved new best (dev_auc {dev_auc:.4f})")
+        print(f"  saved new best (val_auc {val_auc:.4f})")
 
 # %% [markdown]
 # ## 6. Calibration
@@ -510,7 +370,7 @@ def report(name, y, probs, threshold=0.5):
 
 y_v, p_v, lg_v = evaluate(val_loader)
 p_v_cal = torch.sigmoid(lg_v / TEMPERATURE).numpy()
-m_val = report("Validation (seen generators)", y_v, p_v_cal)
+m_val = report("Validation (10% of CIFAKE train)", y_v, p_v_cal)
 
 # Wrongly flagging a real photo is the costly error (spec 4.2), so pick the
 # operating point from the validation reals rather than defaulting to 0.5.
@@ -518,12 +378,13 @@ LOW_FPR_THRESHOLD = float(np.quantile(p_v_cal[y_v == 0], 0.95))
 print(f"\nthreshold for ~5% FPR on validation: {LOW_FPR_THRESHOLD:.4f}")
 m_val_lowfpr = report("Validation @ 5% FPR operating point", y_v, p_v_cal, LOW_FPR_THRESHOLD)
 
-y_u, p_u, lg_u = evaluate(unseen_loader)
-p_u_cal = torch.sigmoid(lg_u / TEMPERATURE).numpy()
-m_unseen = report("Held-out UNSEEN-generator split", y_u, p_u_cal)
-m_unseen_lowfpr = report("UNSEEN split @ 5% FPR operating point", y_u, p_u_cal, LOW_FPR_THRESHOLD)
+y_t, p_t, lg_t = evaluate(test_loader)
+p_t_cal = torch.sigmoid(lg_t / TEMPERATURE).numpy()
+m_test = report("CIFAKE test split", y_t, p_t_cal)
+m_test_lowfpr = report("CIFAKE test split @ 5% FPR operating point", y_t, p_t_cal, LOW_FPR_THRESHOLD)
 
 metrics = {
+    "dataset": f"CIFAKE (birdy654/{CIFAKE_SLUG})",
     "backbone": BACKBONE,
     "image_size": IMG_SIZE,
     "epochs": EPOCHS,
@@ -531,14 +392,11 @@ metrics = {
     "low_fpr_threshold": LOW_FPR_THRESHOLD,
     "train_size": len(train_df),
     "val_size": len(val_df),
-    "unseen_test_size": len(unseen_test),
-    "held_out_generators": sorted(unseen_pool["source"].unique().tolist()),
-    "model_selection_generator": DEV_GENERATOR,
-    "excluded_face_sources": sorted(FACE_EXCLUDE),
+    "test_size": len(test_df),
     "validation": m_val,
     "validation_at_5pct_fpr": m_val_lowfpr,
-    "unseen_generator_split": m_unseen,
-    "unseen_at_5pct_fpr": m_unseen_lowfpr,
+    "test": m_test,
+    "test_at_5pct_fpr": m_test_lowfpr,
 }
 
 torch.save(

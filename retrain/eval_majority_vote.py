@@ -5,19 +5,19 @@ Runs the 5 frozen ensemble members from model/ensemble.py over a balanced test
 sample and reports accuracy / precision / recall / F1 for every member and for
 the hard majority vote. Positive class = AI-generated.
 
-Test data: theminji/AI-vs-Real-balanced, *validation* split parquet shard(s).
-  label 0 = AiArtData -> AI-generated (1)
-  label 1 = RealArt   -> real (0)
+Test data: CIFAKE *test* split (birdy654/cifake-real-and-ai-generated-synthetic-images).
+  test/FAKE -> AI-generated (1)
+  test/REAL -> real (0)
+CIFAKE images are 32x32; each member upsamples them with its own preprocessing.
 
 Scores are batched, image decoding runs in threads, and per-image member
 probabilities are saved after every batch so an interrupted run resumes.
 
 Usage:
-  python retrain/eval_majority_vote.py --parquet path/to/validation-0.parquet --n 1000
+  python retrain/eval_majority_vote.py --data-dir retrain/data/test --n 1000
 """
 
 import argparse
-import io
 import json
 import os
 import sys
@@ -26,23 +26,20 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import pandas as pd
-import pyarrow.parquet as pq
 from PIL import Image
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score, roc_auc_score
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from model.ensemble import ENSEMBLE_MEMBERS, majority_vote, prepare_image, score_members_batch  # noqa: E402
 
-DATASET_LABEL_IS_AI = {0: 1, 1: 0}
+CIFAKE_CLASS_IS_AI = {"REAL": 0, "FAKE": 1}
 
 
-def load_balanced_sample(parquet_paths, n, seed, min_side=0):
-    df = pd.concat([pq.read_table(p).to_pandas() for p in parquet_paths], ignore_index=True)
-    df["is_ai"] = df["label"].map(DATASET_LABEL_IS_AI)
-    if min_side:
-        # The shard mixes in 32x32 CIFAKE thumbnails; upscaling those to 224 is not a fair test.
-        df = df[[min(Image.open(io.BytesIO(r["bytes"])).size) >= min_side for r in df["image"]]]
-        print(f"images with short side >= {min_side}px: {df['is_ai'].value_counts().to_dict()} (1 = AI)", flush=True)
+def load_balanced_sample(data_dir, n, seed):
+    rows = [(os.path.join(data_dir, cls, f), is_ai)
+            for cls, is_ai in CIFAKE_CLASS_IS_AI.items()
+            for f in sorted(os.listdir(os.path.join(data_dir, cls)))]
+    df = pd.DataFrame(rows, columns=["path", "is_ai"])
     per_class = n // 2
     counts = df["is_ai"].value_counts()
     if counts.min() < per_class:
@@ -79,22 +76,21 @@ def vote(P):
     return np.array(preds), np.array(fracs)
 
 
-def decode(record):
-    return prepare_image(Image.open(io.BytesIO(record["bytes"])))
+def decode(path):
+    return prepare_image(Image.open(path))
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--parquet", nargs="+", required=True)
+    ap.add_argument("--data-dir", required=True, help="CIFAKE test split folder containing REAL/ and FAKE/")
     ap.add_argument("--n", type=int, default=1000)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--min-side", type=int, default=0, help="skip images whose short side is below this many px")
     ap.add_argument("--out", default="retrain/majority_vote_results.json")
     args = ap.parse_args()
 
-    sample = load_balanced_sample(args.parquet, args.n, args.seed, args.min_side)
+    sample = load_balanced_sample(args.data_dir, args.n, args.seed)
     y = sample["is_ai"].to_numpy()
     names = [m["id"] for m in ENSEMBLE_MEMBERS]
     print(f"test set: {len(sample)} images ({int(y.sum())} AI, {int(len(y) - y.sum())} real)", flush=True)
@@ -109,7 +105,7 @@ def main():
     with ThreadPoolExecutor(args.workers) as pool:
         for start in range(done, len(sample), args.batch):
             stop = min(start + args.batch, len(sample))
-            prepared = list(pool.map(decode, sample["image"].iloc[start:stop]))
+            prepared = list(pool.map(decode, sample["path"].iloc[start:stop]))
             P[start:stop] = score_members_batch(prepared)
             np.save(cache, P)
 
@@ -146,7 +142,7 @@ def main():
     show("MAJORITY VOTE", results["majority_vote"])
 
     results.update({
-        "dataset": "theminji/AI-vs-Real-balanced (validation split)",
+        "dataset": "CIFAKE (test split)",
         "n_images": int(len(sample)),
         "seed": args.seed,
         "positive_class": "AI-generated",

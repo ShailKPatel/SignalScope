@@ -1,7 +1,7 @@
 """
 SignalScope Retraining Pipeline Script
-Executes automated train/val/test split, trains the Dual-Stream spatial+frequency network,
-tracks ROC-AUC metrics, and exports best model checkpoints.
+Trains the Dual-Stream spatial+frequency network on CIFAKE (validation carved out of
+the train split, test split held out), tracks ROC-AUC metrics, and exports best model checkpoints.
 """
 
 import os
@@ -65,10 +65,10 @@ def run_retraining(config_path="retrain/config.yaml", args_override=None):
     
     # Load config file
     cfg = {
-        "dataset": {"target_total_images": 100000, "split_ratio": {"train": 0.8, "val": 0.1, "test": 0.1}},
+        "dataset": {"name": "CIFAKE", "val_fraction": 0.10, "image_size": 32},
         "model": {"spatial_backbone": "resnet34", "dropout_rate": 0.3},
         "training": {"epochs": 5, "batch_size": 16, "learning_rate": 0.0003, "device": "auto"},
-        "paths": {"data_dir": "retrain/data", "checkpoint_dir": "retrain/checkpoints", "best_model_name": "best_model.pt", "manifest_path": "retrain/data/manifest.json"}
+        "paths": {"data_dir": "retrain/data", "checkpoint_dir": "retrain/checkpoints", "best_model_name": "best_model.pt", "manifest_path": None}
     }
     if HAS_YAML and os.path.exists(config_path):
         with open(config_path, "r") as f:
@@ -83,7 +83,9 @@ def run_retraining(config_path="retrain/config.yaml", args_override=None):
     batch_size = args_override.batch_size if args_override and args_override.batch_size else cfg["training"]["batch_size"]
     lr = args_override.lr if args_override and args_override.lr else cfg["training"]["learning_rate"]
     backbone_name = args_override.spatial_backbone if args_override and args_override.spatial_backbone else cfg["model"]["spatial_backbone"]
-    manifest_path = args_override.manifest_path if args_override and args_override.manifest_path else cfg["paths"]["manifest_path"]
+    manifest_path = args_override.manifest_path if args_override and args_override.manifest_path else cfg["paths"].get("manifest_path")
+    val_fraction = cfg["dataset"].get("val_fraction", 0.10)
+    image_size = cfg["dataset"].get("image_size", 32)
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     
@@ -103,18 +105,21 @@ def run_retraining(config_path="retrain/config.yaml", args_override=None):
         data_dir=data_dir,
         manifest_path=manifest_path,
         batch_size=batch_size,
-        split_ratio=(0.80, 0.10, 0.10),
+        val_fraction=val_fraction,
+        image_size=image_size,
         max_samples=max_samples
     )
 
     if train_loader is None or len(all_items) == 0:
-        print("Error: No data available to train. Generating sample dataset now...")
+        print("Error: No CIFAKE data available to train. Seeding placeholder images in the CIFAKE layout...")
         from retrain.dataset_generator import setup_retraining_environment
-        setup_retraining_environment(data_dir=data_dir, manifest_path=manifest_path, num_sample_images=100, total_target_images=100000)
+        setup_retraining_environment(data_dir=data_dir, num_sample_images=120)
         train_loader, val_loader, test_loader, all_items = build_split_dataloaders(
             data_dir=data_dir,
             manifest_path=manifest_path,
-            batch_size=batch_size
+            batch_size=batch_size,
+            val_fraction=val_fraction,
+            image_size=image_size
         )
 
     # Initialize PyTorch Model
@@ -199,7 +204,10 @@ def run_retraining(config_path="retrain/config.yaml", args_override=None):
                     "optimizer_state_dict": optimizer.state_dict(),
                     "val_auc": val_auc,
                     "val_acc": float(val_acc),
-                    "spatial_backbone": backbone_name
+                    "spatial_backbone": backbone_name,
+                    # Inference (model/predict.py) resizes to native_size then center-crops to image_size.
+                    "native_size": image_size,
+                    "image_size": image_size
                 }, best_checkpoint_path)
                 
                 meta_info = {
@@ -244,8 +252,8 @@ def run_retraining(config_path="retrain/config.yaml", args_override=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SignalScope Model Retraining")
-    parser.add_argument("--data-dir", default="retrain/data", help="Path to data directory")
-    parser.add_argument("--manifest-path", default="retrain/data/manifest.json", help="Path to dataset manifest JSON")
+    parser.add_argument("--data-dir", default="retrain/data", help="CIFAKE root folder (contains train/ and test/)")
+    parser.add_argument("--manifest-path", default=None, help="Optional dataset manifest JSON; omit to scan the CIFAKE folders")
     parser.add_argument("--checkpoint-dir", default="retrain/checkpoints", help="Directory to save model checkpoints")
     parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
     parser.add_argument("--batch-size", type=int, default=16, help="Training batch size")

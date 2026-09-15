@@ -58,21 +58,28 @@ python -c "from model.predict import predict_image; print(predict_image('scope.p
 
 ---
 
-## 📊 3. Reported Metrics & Evaluation (Held-Out Test Set)
+## 📊 3. Dataset & Evaluation
 
-| Metric | Overall Held-Out | Unseen-Generator Split (Primary) | Target Baseline |
-| :--- | :---: | :---: | :---: |
-| **ROC-AUC (Primary Metric)** | **0.968** | **0.942** | 0.820 |
-| **Macro-F1 Score** | **0.925** | **0.898** | 0.780 |
-| **Accuracy @ 0.50 Threshold** | **93.5%** | **90.4%** | 81.0% |
-| **False-Positive Rate (FPR)** | **1.8%** | **2.5%** | 5.0% |
+### Dataset: CIFAKE
+All training and testing uses **[CIFAKE](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images)** (`birdy654/cifake-real-and-ai-generated-synthetic-images`):
 
-### Confusion Matrix
-```
-                Predicted Real    Predicted AI-Generated
-Actual Real          4,890                110
-Actual AI            185                 4,815
-```
+| Split | REAL (CIFAR-10) | FAKE (Stable Diffusion v1.4) | Use |
+| :--- | :---: | :---: | :--- |
+| `train/` | 50,000 | 50,000 | 90% training, 10% validation (epoch selection + temperature calibration) |
+| `test/` | 10,000 | 10,000 | Held-out test set, reported metrics only |
+
+All images are 32x32. The dual-stream model trains at that native resolution, and inference resizes inputs to match. See [retrain/README.md](retrain/README.md) for download and training steps.
+
+### Reported Metrics (CIFAKE Test Split)
+
+> Pending a training run of `retrain/kaggle_train_cifake.ipynb`. Fill this table from the `test` block of the `metrics.json` it produces.
+
+| Metric | CIFAKE Test Split | Target Baseline |
+| :--- | :---: | :---: |
+| **ROC-AUC (Primary Metric)** | _pending_ | 0.820 |
+| **Macro-F1 Score** | _pending_ | 0.780 |
+| **Accuracy @ 0.50 Threshold** | _pending_ | 81.0% |
+| **False-Positive Rate (FPR)** | _pending_ | 5.0% |
 
 ---
 
@@ -124,6 +131,7 @@ SIGNALSCOPE/
 │   ├── metadata.py                 # EXIF / C2PA parser (Module D)
 │   ├── multimodal.py               # CLIP text-image alignment (Module E)
 │   └── active_defense.py           # Adversarial attack testing (Module G)
+├── retrain/                        # CIFAKE training & evaluation (see retrain/README.md)
 └── report/
     └── model_report.md             # Standardized 1-page report
 ```

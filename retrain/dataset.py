@@ -1,7 +1,8 @@
 """
 SignalScope Dataset & Data Loader Module
-Handles loading, splitting, and preprocessing 100,000 images (Real vs. Synthetic).
-Includes FFT frequency spectrum calculation and train/val/test splits.
+Loads CIFAKE (Real vs. AI-Generated, 32x32) from its train/{REAL,FAKE} and
+test/{REAL,FAKE} folders. Validation is carved out of train per class; the
+official test split stays held out. Includes FFT frequency spectrum calculation.
 """
 
 import os
@@ -18,43 +19,48 @@ try:
 except ImportError:
     HAS_TORCH = False
 
+CIFAKE_CLASSES = (("REAL", 0), ("FAKE", 1))
+IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp")
 
-def extract_fft_numpy(img_pil, target_size=(224, 224)):
+
+def extract_fft_numpy(img_pil, target_size=(32, 32)):
     """
     Computes 2D FFT log-magnitude spectrum as a NumPy array [1, H, W].
     """
     img_gray = img_pil.convert("L").resize(target_size)
     arr = np.array(img_gray, dtype=np.float32) / 255.0
-    
+
     # 2D FFT
     fft = np.fft.fft2(arr)
     fft_shift = np.fft.fftshift(fft)
     magnitude = np.abs(fft_shift)
     log_spectrum = np.log(magnitude + 1e-8)
-    
+
     # Normalize to [0, 1]
     min_v = log_spectrum.min()
     max_v = log_spectrum.max()
     norm_spectrum = (log_spectrum - min_v) / (max_v - min_v + 1e-8)
-    
+
     return np.expand_dims(norm_spectrum, axis=0).astype(np.float32)
 
 
 class SignalScopeImageDataset:
     """
-    Core dataset class for indexing real and synthetic image samples.
+    Core dataset class for indexing CIFAKE REAL and FAKE image samples.
     """
-    def __init__(self, data_list, target_size=(224, 224), transform=None):
+    def __init__(self, data_list, target_size=(32, 32), transform=None):
         """
-        data_list: List of dicts [{"path": str, "label": int (0: real, 1: synthetic), "generator": str}]
+        data_list: List of dicts [{"path": str, "label": int (0: REAL, 1: FAKE), "split": str, "generator": str}]
         """
         self.data_list = data_list
         self.target_size = target_size
         self.transform = transform
-        
+
         if HAS_TORCH and self.transform is None:
+            # Resize + center crop mirrors the native_size / image_size transform in model/predict.py.
             self.transform = transforms.Compose([
-                transforms.Resize(self.target_size),
+                transforms.Resize(self.target_size[0]),
+                transforms.CenterCrop(self.target_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
@@ -68,7 +74,7 @@ class SignalScopeImageDataset:
         img_path = item["path"]
         label = item["label"]
         generator = item.get("generator", "unknown")
-        
+
         if os.path.exists(img_path):
             img = Image.open(img_path).convert("RGB")
         else:
@@ -87,7 +93,7 @@ class SignalScopeImageDataset:
 
 if HAS_TORCH:
     class PyTorchSignalScopeDataset(Dataset):
-        def __init__(self, data_list, target_size=(224, 224), transform=None):
+        def __init__(self, data_list, target_size=(32, 32), transform=None):
             self.base_ds = SignalScopeImageDataset(data_list, target_size=target_size, transform=transform)
 
         def __len__(self):
@@ -97,62 +103,64 @@ if HAS_TORCH:
             return self.base_ds[idx]
 
 
-def build_split_dataloaders(data_dir="retrain/data", manifest_path=None, batch_size=32, split_ratio=(0.80, 0.10, 0.10), seed=42, max_samples=None):
+def build_split_dataloaders(data_dir="retrain/data", manifest_path=None, batch_size=32, val_fraction=0.10, image_size=32, seed=42, max_samples=None):
     """
-    Scans directory or loads manifest, performs stratified train/val/test split,
-    and returns DataLoaders for train, validation, and held-out test set.
+    Scans the CIFAKE folders under data_dir (or loads a manifest), holds out
+    val_fraction of each train class for validation, keeps CIFAKE's test split
+    as the held-out set, and returns DataLoaders for train, validation, and test.
     """
     random.seed(seed)
     items = []
-    
-    # 1. Load from manifest if present
+
+    # 1. Load from manifest if one is given
     if manifest_path and os.path.exists(manifest_path):
         with open(manifest_path, "r") as f:
-            manifest_data = json.load(f)
-            items = manifest_data.get("samples", [])
-    
-    if max_samples and max_samples > 0:
-        items = items[:max_samples]
-    
-    # 2. Scan data_dir if no manifest items found
+            items = json.load(f).get("samples", [])
+
+    # 2. Otherwise scan the CIFAKE layout: data_dir/{train,test}/{REAL,FAKE}
     if not items and os.path.exists(data_dir):
-        for split in ["train", "val", "test"]:
-            split_dir = os.path.join(data_dir, split)
-            if not os.path.exists(split_dir):
-                continue
-            for cls_name, cls_label in [("real", 0), ("synthetic", 1)]:
-                cls_dir = os.path.join(split_dir, cls_name)
-                if os.path.exists(cls_dir):
-                    for fname in os.listdir(cls_dir):
-                        if fname.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
-                            items.append({
-                                "path": os.path.join(cls_dir, fname),
-                                "label": cls_label,
-                                "split": split,
-                                "generator": "synthetic_gen" if cls_label == 1 else "real_camera"
-                            })
-                            
-    # If still empty, return dummy list
+        for split in ("train", "test"):
+            for cls_name, cls_label in CIFAKE_CLASSES:
+                cls_dir = os.path.join(data_dir, split, cls_name)
+                if not os.path.isdir(cls_dir):
+                    continue
+                for fname in sorted(os.listdir(cls_dir)):
+                    if fname.lower().endswith(IMAGE_EXTS):
+                        items.append({
+                            "path": os.path.join(cls_dir, fname),
+                            "label": cls_label,
+                            "split": split,
+                            "generator": "stable_diffusion_v1_4" if cls_label == 1 else "cifar10"
+                        })
+
     if not items:
-        print(f"Warning: No dataset images found in {data_dir}. Run retrain/dataset_generator.py first!")
+        print(f"Warning: No CIFAKE images found in {data_dir} (expected train/ and test/, each with REAL/ and FAKE/). "
+              "Download CIFAKE there, or run retrain/dataset_generator.py for placeholder images.")
         return None, None, None, []
 
-    # Partition dataset into Train / Val / Test
-    # Check if pre-split exist in metadata
+    if max_samples and max_samples > 0:
+        # Folders are read class by class, so shuffle before slicing or the subset is single-class.
+        random.shuffle(items)
+        items = items[:max_samples]
+
+    splits = {i.get("split") for i in items}
+    if not splits & {"train", "test"}:
+        # No split metadata at all: random partition, val_fraction each for val and test
+        random.shuffle(items)
+        n_hold = int(len(items) * val_fraction)
+        for n, item in enumerate(items):
+            item["split"] = "val" if n < n_hold else "test" if n < 2 * n_hold else "train"
+    elif "val" not in splits:
+        # CIFAKE ships train/test only: hold out val_fraction of each train class
+        for label in (0, 1):
+            cls_items = [i for i in items if i.get("split") == "train" and i["label"] == label]
+            random.shuffle(cls_items)
+            for item in cls_items[:int(len(cls_items) * val_fraction)]:
+                item["split"] = "val"
+
     train_items = [i for i in items if i.get("split") == "train"]
     val_items = [i for i in items if i.get("split") == "val"]
     test_items = [i for i in items if i.get("split") == "test"]
-
-    if not (train_items and val_items and test_items):
-        # Auto-split dynamically
-        random.shuffle(items)
-        n_total = len(items)
-        n_train = int(n_total * split_ratio[0])
-        n_val = int(n_total * split_ratio[1])
-        
-        train_items = items[:n_train]
-        val_items = items[n_train:n_train + n_val]
-        test_items = items[n_train + n_val:]
 
     print(f"Dataset split loaded successfully:")
     print(f"  Train samples: {len(train_items)}")
@@ -161,14 +169,15 @@ def build_split_dataloaders(data_dir="retrain/data", manifest_path=None, batch_s
     print(f"  Total samples: {len(train_items) + len(val_items) + len(test_items)}")
 
     if HAS_TORCH:
-        train_ds = PyTorchSignalScopeDataset(train_items)
-        val_ds = PyTorchSignalScopeDataset(val_items)
-        test_ds = PyTorchSignalScopeDataset(test_items)
-        
+        target_size = (image_size, image_size)
+        train_ds = PyTorchSignalScopeDataset(train_items, target_size=target_size)
+        val_ds = PyTorchSignalScopeDataset(val_items, target_size=target_size)
+        test_ds = PyTorchSignalScopeDataset(test_items, target_size=target_size)
+
         train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=0)
         val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=0)
         test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=0)
-        
+
         return train_loader, val_loader, test_loader, items
     else:
         return train_items, val_items, test_items, items
