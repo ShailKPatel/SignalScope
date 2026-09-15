@@ -39,7 +39,11 @@ data/
 datasets/
 raw_data/
 processed_data/
-checkpoints/
+# Checkpoint folders: weights stay out of git (best_model.pt ships as a GitHub
+# Release asset), but the small stacker + metrics JSON are committed.
+**/checkpoints/*
+!**/checkpoints/stacking_metalearner.json
+!**/checkpoints/metrics.json
 weights/
 saved_models/
 *.pt
@@ -61,6 +65,9 @@ trained-v*/*.zip
 cifake-real-and-ai-generated-synthetic-images/
 *cifake*.zip
 signalscope_colab.zip
+signalscope_outputs.zip
+
+DEMO_VIDEO_SCRIPT.md
 
 runs/
 wandb/

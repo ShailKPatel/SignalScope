@@ -1,0 +1,61 @@
+{
+  "dataset": "CIFAKE (birdy654/cifake-real-and-ai-generated-synthetic-images)",
+  "backbone": "resnet34",
+  "image_size": 32,
+  "epochs": 6,
+  "epochs_planned": 6,
+  "best_val_auc": 0.9979300799999999,
+  "temperature": 1.0657559633255005,
+  "low_fpr_threshold": 0.19504912197589874,
+  "train_size": 90000,
+  "val_size": 10000,
+  "test_size": 20000,
+  "validation": {
+    "auc": 0.9979300799999999,
+    "macro_f1": 0.9791999791999793,
+    "accuracy": 0.9792,
+    "fpr": 0.0198,
+    "confusion": {
+      "tn": 4901,
+      "fp": 99,
+      "fn": 109,
+      "tp": 4891
+    }
+  },
+  "validation_at_5pct_fpr": {
+    "auc": 0.9979300799999999,
+    "macro_f1": 0.9713868963430492,
+    "accuracy": 0.9714,
+    "fpr": 0.05,
+    "confusion": {
+      "tn": 4750,
+      "fp": 250,
+      "fn": 36,
+      "tp": 4964
+    }
+  },
+  "test": {
+    "auc": 0.997562975,
+    "macro_f1": 0.9773996906017643,
+    "accuracy": 0.9774,
+    "fpr": 0.0263,
+    "confusion": {
+      "tn": 9737,
+      "fp": 263,
+      "fn": 189,
+      "tp": 9811
+    }
+  },
+  "test_at_5pct_fpr": {
+    "auc": 0.997562975,
+    "macro_f1": 0.967431162102738,
+    "accuracy": 0.96745,
+    "fpr": 0.0566,
+    "confusion": {
+      "tn": 9434,
+      "fp": 566,
+      "fn": 85,
+      "tp": 9915
+    }
+  }
+}
