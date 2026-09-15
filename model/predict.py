@@ -75,12 +75,13 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
 
     else:
         # =====================================================================
-        # STEP 2: LEVEL 2 DEEP LEARNING VISION MODEL CLASSIFIER (5-MODEL MAJORITY VOTE)
+        # STEP 2: LEVEL 2 DEEP LEARNING VISION MODEL CLASSIFIER (3-MODEL STACKED ENSEMBLE)
         # =====================================================================
-        detection_level = "Level 2: Deep Learning Vision Model (5-Model Majority Vote)"
+        detection_level = "Level 2: Deep Learning Vision Model (3-Model Stacked Ensemble)"
         ensemble_info = {}
 
-        # Tier 1: Majority-vote ensemble (2x ViT + 2x Swin + ResNet34/FFT dual-stream)
+        # Tier 1: Stacked ensemble (ViT + Swin + ResNet34/FFT dual-stream -> ridge logistic
+        # meta-learner; majority vote until the meta-learner is trained)
         try:
             from .ensemble import run_ensemble_inference
             ens_prob, ens_cam, ens_info = run_ensemble_inference(img)

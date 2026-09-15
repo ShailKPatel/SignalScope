@@ -27,6 +27,11 @@ uvicorn[standard]>=0.22.0
 python-multipart>=0.0.6
 pydantic>=2.0.0
 
+# Ensemble Stacking Meta-Learner (training + evaluation scripts)
+scikit-learn>=1.3.0
+pandas>=2.0.0
+pyarrow>=12.0.0
+
 # Testing & Quality
 pytest>=7.3.0
 requests>=2.30.0

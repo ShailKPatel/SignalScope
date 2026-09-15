@@ -1,14 +1,12 @@
 """
-SignalScope 5-Family Multi-Model Expert Ensemble Verification Test Suite
+SignalScope 3-Family Multi-Model Expert Ensemble Verification Test Suite
 Tests:
-  1. Individual evaluation across 5 distinct Model Families:
+  1. Individual evaluation across 3 distinct Model Families:
      - Family 1: Vision Transformer (ViT-Base: dima806/deepfake_vs_real_image_detection)
-     - Family 2: Swin Transformer (Shifted Windows: umm-maybe/AI-image-detector)
-     - Family 3: ConvNeXt CNN (Inverted Bottleneck: prithivMLmods/Deep-Fake-Detector-v2)
-     - Family 4: EfficientNet CNN (Compound Scaled: Falconsai/intent_based_deepfake)
-     - Family 5: Dual-Stream Spatial + 2D FFT Frequency Backbone
-  2. Entropy-Weighted Soft Voting & Composite Heatmap Aggregation across all 5 families.
-  3. REST API & WebSocket Streaming with 5-Family Ensemble Verdict.
+     - Family 2: Swin Transformer (Shifted Windows: Organika/sdxl-detector)
+     - Family 3: Dual-Stream Spatial + 2D FFT Frequency Backbone
+  2. Hard Majority Voting & Composite Heatmap Aggregation across all 3 families.
+  3. REST API & WebSocket Streaming with 3-Family Ensemble Verdict.
 """
 
 import os
@@ -29,13 +27,13 @@ from src.api.main import app
 client = TestClient(app)
 
 
-def test_ensemble_5_families_standalone():
+def test_ensemble_3_families_standalone():
     print("=" * 85)
-    print("      SIGNAL SCOPE - 5-FAMILY MULTI-MODEL EXPERT ENSEMBLE TEST")
+    print("      SIGNAL SCOPE - 3-FAMILY MULTI-MODEL EXPERT ENSEMBLE TEST")
     print("=" * 85)
 
     real_img_path = "test_images/real_einstein_photo.jpg"
-    print(f"\nEvaluating 5-Family Ensemble on Real Photo ({real_img_path})...")
+    print(f"\nEvaluating 3-Family Ensemble on Real Photo ({real_img_path})...")
     img = Image.open(real_img_path).convert("RGB")
 
     t0 = time.time()
@@ -57,16 +55,46 @@ def test_ensemble_5_families_standalone():
     print(f"\n  Composite Saliency Map Shape: {composite_cam.shape if composite_cam is not None else None}")
     assert prob is not None
     assert breakdown.get("num_families_evaluated", 0) >= 3
-    print("  SUCCESS: Standalone 5-Family Multi-Model Ensemble Test Passed!\n")
+    print("  SUCCESS: Standalone 3-Family Multi-Model Ensemble Test Passed!\n")
 
 
-def test_full_pipeline_5_family_ensemble():
+def test_stacking_metalearner_offline(tmp_path=None):
+    """Checks the stacked fusion math on a hand-written artifact, without loading any model."""
+    import tempfile
+    import numpy as np
+    from model import ensemble
+
+    names = [m["id"] for m in ensemble.ENSEMBLE_MEMBERS]
+    spec = {
+        "type": "stacking_logistic_regression", "eps": 1e-6, "members": names,
+        "scaler_mean": [0.0] * len(names), "scaler_scale": [1.0] * len(names),
+        "coefficients": [1.0] * len(names), "intercept": 0.0, "threshold": 0.7,
+    }
+    path = os.path.join(str(tmp_path) if tmp_path else tempfile.mkdtemp(), "stacker.json")
+    with open(path, "w") as f:
+        json.dump(spec, f)
+
+    stacker = ensemble.load_stacker(path)
+    assert stacker is not None
+
+    # Symmetric inputs cancel in logit space -> P(AI) = 0.5, below the 0.7 threshold.
+    p, is_ai, score = ensemble.stacked_decision(stacker, [0.9, 0.1, 0.5])
+    assert abs(p - 0.5) < 1e-6 and not is_ai and score < 0.5
+
+    # Remapped score keeps predict.py's fixed >= 0.5 cut in agreement with the tuned threshold.
+    for probs in ([0.99, 0.95, 0.9], [0.6, 0.6, 0.6], [0.05, 0.2, 0.4]):
+        p, is_ai, score = ensemble.stacked_decision(stacker, probs)
+        assert is_ai == (p >= 0.7) == (score >= 0.5)
+    print("  SUCCESS: Stacking meta-learner offline test passed!\n")
+
+
+def test_full_pipeline_3_family_ensemble():
     print("=" * 85)
     print("      SIGNAL SCOPE - FULL PIPELINE LEVEL 2 ENSEMBLE TEST")
     print("=" * 85)
 
     real_img_path = "test_images/real_einstein_photo.jpg"
-    print(f"\nTesting POST /api/predict Level 2 5-Family Ensemble Classification...")
+    print(f"\nTesting POST /api/predict Level 2 3-Family Ensemble Classification...")
     with open(real_img_path, "rb") as f:
         res = client.post("/api/predict", files={"file": ("real_einstein_photo.jpg", f, "image/jpeg")}).json()
 
@@ -81,10 +109,10 @@ def test_full_pipeline_5_family_ensemble():
     print(f"  Evaluated Families:{ens_bd.get('num_families_evaluated')}")
     
     assert "Level 2" in verdict.get("detection_level")
-    print("  SUCCESS: Full Pipeline 5-Family Ensemble Test Passed!\n")
+    print("  SUCCESS: Full Pipeline 3-Family Ensemble Test Passed!\n")
 
 
-def test_websocket_5_family_ensemble():
+def test_websocket_3_family_ensemble():
     print("=" * 85)
     print("      SIGNAL SCOPE - WEBSOCKET STREAMING ENSEMBLE VERIFICATION")
     print("=" * 85)
@@ -123,10 +151,11 @@ def test_websocket_5_family_ensemble():
                 print(f"  [WS Error]: {msg.get('message')}")
                 break
 
-    print("WebSocket 5-Family Ensemble Streaming Verification Passed!\n")
+    print("WebSocket 3-Family Ensemble Streaming Verification Passed!\n")
 
 
 if __name__ == "__main__":
-    test_ensemble_5_families_standalone()
-    test_full_pipeline_5_family_ensemble()
-    test_websocket_5_family_ensemble()
+    test_stacking_metalearner_offline()
+    test_ensemble_3_families_standalone()
+    test_full_pipeline_3_family_ensemble()
+    test_websocket_3_family_ensemble()

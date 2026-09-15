@@ -1,6 +1,6 @@
 """
 SignalScope Pre-Trained Model & Grad-CAM Heatmap Engine
-Loads open-source Hugging Face AI Image Detector models (e.g. Falconsai/ai_image_detector, umm-maybe/AI-image-detector)
+Loads open-source Hugging Face AI Image Detector models (e.g. dima806/deepfake_vs_real_image_detection)
 and extracts spatial saliency Grad-CAM heatmaps.
 """
 
@@ -34,8 +34,6 @@ _LOADED_MODEL_NAME = None
 
 _CANDIDATE_MODELS = [
     "dima806/deepfake_vs_real_image_detection",
-    "umm-maybe/AI-image-detector",
-    "prithivMLmods/Deep-Fake-Detector-v2-Model"
 ]
 
 def get_pretrained_ai_detector(model_name=None):

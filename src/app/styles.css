@@ -607,6 +607,80 @@ body {
   background: #EFF6FF;
 }
 
+/* Processing overlay shown while the model analyses an upload */
+.gov-dropzone { position: relative; }
+
+.processing-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  padding: 1.5rem;
+  background: rgba(248, 250, 252, 0.94);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.processing-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #CBD5E1;
+  border-top-color: var(--gov-navy);
+  border-right-color: var(--gov-saffron);
+  border-radius: 50%;
+  animation: processing-spin 0.9s linear infinite;
+}
+
+.processing-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--gov-navy);
+}
+
+.processing-sub {
+  font-size: 0.8rem;
+  color: var(--text-medium);
+}
+
+.processing-bar {
+  position: relative;
+  width: min(320px, 90%);
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.processing-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gov-navy), var(--gov-saffron));
+  border-radius: 999px;
+  animation: processing-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes processing-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes processing-slide {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .processing-spinner { animation-duration: 2.5s; }
+  .processing-bar::after { animation-duration: 2.5s; }
+}
+
 .dropzone-icon {
   width: 48px;
   height: 48px;
