@@ -22,9 +22,9 @@ const translations = {
     mainPortalTitle: "SIGNAL SCOPE",
     directorate: "Media Verification & Authenticity Platform",
     emblemSub: "AUTHENTICITY ENGINE",
-    leader1Name: "Shri A. Sharma",
+    leader1Name: "Shail Patel",
     leader1Role: "Team Leader (Takniki Vibhag)",
-    leader2Name: "Dr. P. Verma",
+    leader2Name: "Rajvi Chauhan",
     leader2Role: "Principal AI Research Lead",
     menuSingle: "Single Image Submission Desk",
     menuFolder: "Directory Batch Audit Desk",
@@ -61,34 +61,34 @@ const translations = {
     btnChooseFolder: "Choose Image Directory",
     teamSectionTitle: "Team Directorate & Project Contributors (Takniki Vibhag)",
     teamSectionSub: "SIH 2026 • Problem Statement C-433",
-    m1Name: "Shri A. Sharma",
+    m1Name: "Shail Patel",
     m1Desig: "Team Leader & System Architect",
     m1Role: "Overall project coordination, core architecture design, and SIH 2026 pipeline deployment.",
     m1Badge: "Lead Contributor",
-    m2Name: "Dr. P. Verma",
+    m2Name: "Rajvi Chauhan",
     m2Desig: "Principal AI Research Lead",
     m2Role: "Neural network training, generalisation splits, and frequency domain artifact extraction.",
     m2Badge: "AI Core",
-    m3Name: "Shri R. Patel",
+    m3Name: "Kasak Gohil",
     m3Desig: "Computer Vision & Grad-CAM Specialist",
     m3Role: "Module A Explainability engine, visual cue localization, and Layer-CAM heatmap generation.",
     m3Badge: "Module A Lead",
-    m4Name: "Smt. S. Gupta",
+    m4Name: "Henil Shah",
     m4Desig: "Multimodal NLP & CLIP Alignment Lead",
     m4Role: "Module E text-image semantic matching, claim consistency verification, and prompt auditing.",
     m4Badge: "Module E Lead",
-    m5Name: "Shri V. Iyer",
+    m5Name: "Divyesh Prajapati",
     m5Desig: "Security & Active Defense Specialist",
     m5Role: "Module D EXIF/C2PA metadata parser and Module G adversarial attack testing framework.",
     m5Badge: "Module D & G Lead",
-    m6Name: "Shri K. Singh",
+    m6Name: "Sarvesh Mudaliar",
     m6Desig: "Web Infrastructure & Full-Stack Engineer",
     m6Role: "Module F Real-time web application dashboard, GIGW UI design system, and FastAPI integration.",
     m6Badge: "Module F Lead",
     aboutHeading: "Technical Methodology & Forensic Framework Specifications",
     aboutSub: "SIH 2026 C-433 Technical Spec",
     methodCoreTitle: "1. Mandatory Core Task: Unseen Generator Generalisation",
-    methodCoreDesc: "SignalScope uses a transfer-learning convolutional backbone paired with spatial noise residual extraction (FFT/DCT high-frequency artifact analysis). Predictions are evaluated on a held-out test split featuring unseen generator architectures (Midjourney v6, SDXL, Flux, DALL-E 3) under calibrated ROC-AUC metrics.",
+    methodCoreDesc: "SignalScope uses a transfer-learning convolutional backbone paired with spatial noise residual extraction (FFT/DCT high-frequency artifact analysis). Models are trained on the CIFAKE train split and evaluated on its held-out test split (CIFAR-10 photos vs. Stable Diffusion v1.4 images) under calibrated ROC-AUC metrics.",
     methodModATitle: "2. Bonus Module A: Faithful Visual Explanations (Grad-CAM)",
     methodModADesc: "Provides localized visual saliency heatmaps highlighting exact pixel-level anomalies such as texture warping, irregular specular reflections, and anatomical flaws. Cites grounded natural language points without over-claiming certainty.",
     methodModBTitle: "3. Bonus Module B: Generator Family & Model Architecture Attribution",
@@ -172,9 +172,9 @@ const translations = {
     mainPortalTitle: "तकनीकी विभाग",
     directorate: "तकनीकी मीडिया सत्यापन एवं भ्रामक सूचना निवारण प्रणाली",
     emblemSub: "एसआईएच 2026 C-433",
-    leader1Name: "श्री ए. शर्मा",
+    leader1Name: "शैल पटेल",
     leader1Role: "टीम लीडर (तकनीकी विभाग)",
-    leader2Name: "डॉ. पी. वर्मा",
+    leader2Name: "राजवी चौहान",
     leader2Role: "प्रधान एआई अनुसंधान प्रमुख",
     menuSingle: "एकल छवि प्रस्तुति डेस्क",
     menuFolder: "निर्देशिका बैच लेखापरीक्षा डेस्क",
@@ -211,34 +211,34 @@ const translations = {
     btnChooseFolder: "छवि निर्देशिका चुनें",
     teamSectionTitle: "टीम निदेशालय एवं परियोजना योगदानकर्ता (तकनीकी विभाग)",
     teamSectionSub: "एसआईएच 2026 • समस्या कथन C-433",
-    m1Name: "श्री ए. शर्मा",
+    m1Name: "शैल पटेल",
     m1Desig: "टीम लीडर एवं सिस्टम आर्किटेक्ट",
     m1Role: "समग्र परियोजना समन्वय, कोर आर्किटेक्चर डिज़ाइन और एसआईएच 2026 पाइपलाइन तैनाती।",
     m1Badge: "प्रमुख योगदानकर्ता",
-    m2Name: "डॉ. पी. वर्मा",
+    m2Name: "राजवी चौहान",
     m2Desig: "प्रधान एआई अनुसंधान प्रमुख",
     m2Role: "न्यूरल नेटवर्क प्रशिक्षण, सामान्यीकरण विभाजन और आवृत्ति डोमेन कलाकृति निष्कर्षण।",
     m2Badge: "एआई कोर",
-    m3Name: "श्री आर. पटेल",
+    m3Name: "कसक गोहिल",
     m3Desig: "कंप्यूटर विजन एवं ग्रैड-कैम विशेषज्ञ",
     m3Role: "मॉड्यूल A स्पष्टीकरण इंजन, दृश्य संकेत स्थानीयकरण और लेयर-कैम हीटमैप निर्माण।",
     m3Badge: "मॉड्यूल A प्रमुख",
-    m4Name: "श्रीमती एस. गुप्ता",
+    m4Name: "हेनिल शाह",
     m4Desig: "मल्टीमॉडल एनएलपी एवं CLIP संरेखण प्रमुख",
     m4Role: "मॉड्यूल E पाठ-छवि सिमेंटिक मिलान, दावा निरंतरता सत्यापन और प्रॉम्प्ट लेखापरीक्षा।",
     m4Badge: "मॉड्यूल E प्रमुख",
-    m5Name: "श्री वी. अय्यर",
+    m5Name: "दिव्येश प्रजापति",
     m5Desig: "सुरक्षा एवं सक्रिय रक्षा विशेषज्ञ",
     m5Role: "मॉड्यूल D EXIF/C2PA मेटाडेटा पार्सर और मॉड्यूल G प्रतिकूल हमला परीक्षण ढांचा।",
     m5Badge: "मॉड्यूल D एवं G प्रमुख",
-    m6Name: "श्री के. सिंह",
+    m6Name: "सर्वेश मुदलियार",
     m6Desig: "वेब इंफ्रास्ट्रक्चर एवं फुल-स्टैक इंजीनियर",
     m6Role: "मॉड्यूल F वास्तविक समय वेब एप्लिकेशन डैशबोर्ड, GIGW UI डिज़ाइन सिस्टम और FastAPI एकीकरण।",
     m6Badge: "मॉड्यूल F प्रमुख",
     aboutHeading: "तकनीकी कार्यप्रणाली एवं फॉरेंसिक ढांचा विनिर्देश",
     aboutSub: "एसआईएच 2026 C-433 तकनीकी विवरण",
     methodCoreTitle: "1. अनिवार्य कोर कार्य: अनदेखे जनरेटर का सामान्यीकरण",
-    methodCoreDesc: "सिग्नलस्कोप ट्रांसफर-लर्निंग कॉन्वोल्यूशनल बैकबोन के साथ स्थानिक शोर अवशिष्ट निष्कर्षण (FFT/DCT उच्च-आवृत्ति कलाकृति विश्लेषण) का उपयोग करता है। पूर्वानुमानों का मूल्यांकन अनदेखे जनरेटर आर्किटेक्चर (Midjourney v6, SDXL, Flux, DALL-E 3) पर कैलिब्रेटेड ROC-AUC मेट्रिक्स के तहत किया जाता है।",
+    methodCoreDesc: "सिग्नलस्कोप ट्रांसफर-लर्निंग कॉन्वोल्यूशनल बैकबोन के साथ स्थानिक शोर अवशिष्ट निष्कर्षण (FFT/DCT उच्च-आवृत्ति कलाकृति विश्लेषण) का उपयोग करता है। मॉडल CIFAKE ट्रेन स्प्लिट पर प्रशिक्षित होते हैं और इसके अलग रखे गए टेस्ट स्प्लिट (CIFAR-10 फ़ोटो बनाम Stable Diffusion v1.4 छवियाँ) पर कैलिब्रेटेड ROC-AUC मेट्रिक्स के तहत मूल्यांकित किए जाते हैं।",
     methodModATitle: "2. बोनस मॉड्यूल A: विश्वसनीय दृश्य स्पष्टीकरण (Grad-CAM)",
     methodModADesc: "सटीक पिक्सेल-स्तरीय विसंगतियों जैसे टेक्सचर वारपिंग, अनियमित स्पेक्युलर परावर्तन और शारीरिक त्रुटियों को उजागर करने वाले स्थानीयकृत दृश्य गर्मी मानचित्र (हीटमैप) प्रदान करता है।",
     methodModBTitle: "3. बोनस मॉड्यूल B: जनरेटर परिवार एवं मॉडल आर्किटेक्चर एट्रिब्यूशन",
@@ -684,7 +684,45 @@ async function processFolderFiles(fileList) {
   await uploadBatchFiles(files);
 }
 
+let isProcessing = false;
+
+function setProcessing(cardId, active, title, sub) {
+  const zone = document.querySelector(`#${cardId} .gov-dropzone`);
+  if (!zone) return;
+
+  let overlay = zone.querySelector('.processing-overlay');
+  if (!active) {
+    if (overlay) overlay.remove();
+    zone.removeAttribute('aria-busy');
+    return;
+  }
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'processing-overlay';
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.innerHTML =
+      '<div class="processing-spinner"></div>' +
+      '<div class="processing-title"></div>' +
+      '<div class="processing-bar"></div>' +
+      '<div class="processing-sub"></div>';
+    zone.appendChild(overlay);
+  }
+  overlay.querySelector('.processing-title').textContent = title;
+  overlay.querySelector('.processing-sub').textContent = sub || '';
+  zone.setAttribute('aria-busy', 'true');
+}
+
 async function uploadSingleFile(file, caption) {
+  if (isProcessing) return;
+  isProcessing = true;
+  setProcessing(
+    'dropZoneSingle', true,
+    currentLang === 'hi' ? 'छवि का विश्लेषण किया जा रहा है…' : 'Analysing image…',
+    currentLang === 'hi' ? 'फॉरेंसिक मॉडल चल रहे हैं, कृपया प्रतीक्षा करें।' : `Running forensic models on ${file.name}. Please wait.`
+  );
+
   const formData = new FormData();
   formData.append('file', file);
   if (caption) {
@@ -712,10 +750,23 @@ async function uploadSingleFile(file, caption) {
   } catch (err) {
     console.error('Error analyzing image:', err);
     alert('Error connecting to SignalScope backend service: ' + err.message);
+  } finally {
+    isProcessing = false;
+    setProcessing('dropZoneSingle', false);
+    const input = document.getElementById('fileInputSingle');
+    if (input) input.value = '';
   }
 }
 
 async function uploadBatchFiles(files) {
+  if (isProcessing) return;
+  isProcessing = true;
+  setProcessing(
+    'dropZoneFolder', true,
+    currentLang === 'hi' ? `${files.length} छवियों का विश्लेषण किया जा रहा है…` : `Analysing ${files.length} images…`,
+    currentLang === 'hi' ? 'बड़े फ़ोल्डर में कुछ समय लग सकता है।' : 'Large folders can take a while. Please wait.'
+  );
+
   const formData = new FormData();
   files.forEach(f => formData.append('files', f));
 
@@ -745,6 +796,11 @@ async function uploadBatchFiles(files) {
   } catch (err) {
     console.error('Error processing batch:', err);
     alert('Error processing batch upload: ' + err.message);
+  } finally {
+    isProcessing = false;
+    setProcessing('dropZoneFolder', false);
+    const input = document.getElementById('folderInputDirectory');
+    if (input) input.value = '';
   }
 }
 

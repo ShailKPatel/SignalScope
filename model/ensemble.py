@@ -1,17 +1,22 @@
 """
-SignalScope 5-Member Majority-Vote Ensemble
+SignalScope 3-Member Stacked Ensemble
   1. dima806/deepfake_vs_real_image_detection   (ViT-Base)
-  2. umm-maybe/AI-image-detector                 (Swin)
-  3. Organika/sdxl-detector                      (Swin, fine-tuned from #2)
-  4. prithivMLmods/Deep-Fake-Detector-v2-Model   (ViT-Base)
-  5. SignalScope Dual-Stream                     (ResNet34 spatial + 2D FFT frequency)
+  2. Organika/sdxl-detector                      (Swin)
+  3. SignalScope Dual-Stream                     (ResNet34 spatial + 2D FFT frequency)
 
-Each member's raw output is converted to P(AI-generated) by model.labels, votes
-AI when that probability is >= 0.5, and the majority wins. An even split (only
-possible when a member fails to load) resolves to real, since wrongly flagging a
+Each member's raw output is converted to P(AI-generated) by model.labels. The
+members are frozen level-0 models; their outputs are fused by a level-1 stacking
+meta-learner: an L2-regularized (ridge) logistic regression over the members'
+logit(P(AI)), fitted on out-of-fold predictions by retrain/train_stacker.py and
+stored as plain JSON at STACKER_PATH.
+
+When no meta-learner has been trained yet, or a member fails to load (the
+meta-learner needs every feature it was fitted on), the ensemble falls back to a
+hard majority vote. An even split resolves to real, since wrongly flagging a
 genuine photo is the costly error.
 """
 
+import json
 import os
 import time
 import numpy as np
@@ -37,9 +42,12 @@ _DUAL_STREAM_CHECKPOINTS = [
     os.path.join(_ROOT, "trained-v1", "best_model.zip"),
     os.path.join(_ROOT, "retrain", "checkpoints", "best_model.pt"),
 ]
+STACKER_PATH = os.environ.get(
+    "SIGNALSCOPE_STACKER", os.path.join(_ROOT, "retrain", "checkpoints", "stacking_metalearner.json"))
 
 _ENSEMBLE_MODELS = {}
 _DUAL_STREAM = {}
+_STACKER = {}
 
 ENSEMBLE_MEMBERS = [
     {
@@ -50,25 +58,11 @@ ENSEMBLE_MEMBERS = [
         "specialization": "Global Spatial Attention & Semantic Incoherence",
     },
     {
-        "id": "swin_umm_maybe",
-        "family": "Swin Transformer",
-        "name": "umm-maybe/AI-image-detector",
-        "architecture": "Hierarchical Shifted Window Transformer",
-        "specialization": "Artistic AI Imagery (VQGAN / early diffusion)",
-    },
-    {
         "id": "swin_sdxl",
         "family": "Swin Transformer (SDXL fine-tune)",
         "name": "Organika/sdxl-detector",
         "architecture": "Swin, fine-tuned on Wikimedia vs SDXL pairs",
         "specialization": "Latent Diffusion Noise & SDXL Render Anomaly Detection",
-    },
-    {
-        "id": "vit_prithiv_v2",
-        "family": "Vision Transformer (ViT)",
-        "name": "prithivMLmods/Deep-Fake-Detector-v2-Model",
-        "architecture": "ViT-Base/16 (in21k), fine-tuned",
-        "specialization": "Deepfake vs Realism Classification",
     },
     {
         "id": "dual_stream_freq",
@@ -262,20 +256,97 @@ def majority_vote(p_ai_values):
     return ai_votes > len(votes) / 2, ai_votes, len(votes)
 
 
+# ---------------------------------------------------------------------------
+# Stacking meta-learner (level 1). Trained by retrain/train_stacker.py; stored
+# as JSON so inference needs only numpy.
+# ---------------------------------------------------------------------------
+_LOGIT_EPS = 1e-6
+
+
+def logit_features(P, eps=_LOGIT_EPS):
+    """[N, M] member P(AI) -> [N, M] logits. Logit space makes a linear meta-learner a log-odds pool."""
+    P = np.clip(np.asarray(P, dtype=np.float64), eps, 1.0 - eps)
+    return np.log(P) - np.log1p(-P)
+
+
+def load_stacker(path=STACKER_PATH):
+    """Loads and caches the meta-learner JSON. Returns the spec dict, or None when untrained or invalid."""
+    if path in _STACKER:
+        return _STACKER[path]
+    _STACKER[path] = None
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as f:
+            spec = json.load(f)
+        member_ids = [m["id"] for m in ENSEMBLE_MEMBERS]
+        if spec.get("members") != member_ids:
+            print(f"Stacker '{path}' was trained on {spec.get('members')}, ensemble is {member_ids} - ignoring it")
+            return None
+        for key in ("scaler_mean", "scaler_scale", "coefficients"):
+            spec[key] = np.asarray(spec[key], dtype=np.float64)
+            if spec[key].shape != (len(member_ids),):
+                raise ValueError(f"{key} has shape {spec[key].shape}")
+        _STACKER[path] = spec
+        print(f"Ensemble: loaded stacking meta-learner '{os.path.normpath(path)}' "
+              f"(C={spec.get('C')}, threshold={spec.get('threshold', 0.5):.3f})")
+    except Exception as e:
+        print(f"Stacker '{path}' note: {e}")
+    return _STACKER[path]
+
+
+def stacked_decision(stacker, p_ai_values):
+    """
+    Returns (p_stacked, is_ai, score). p_stacked is the meta-learner's P(AI);
+    is_ai compares it to the trained threshold t. score maps [0, t) -> [0, 0.5)
+    and [t, 1] -> [0.5, 1] piecewise-linearly, so callers using a fixed 0.5 cut
+    (model/predict.py) agree with the tuned operating point.
+    """
+    x = logit_features([p_ai_values], stacker.get("eps", _LOGIT_EPS))[0]
+    z = float(np.dot((x - stacker["scaler_mean"]) / stacker["scaler_scale"], stacker["coefficients"])
+              + stacker["intercept"])
+    p = float(1.0 / (1.0 + np.exp(-z)))
+    t = float(stacker.get("threshold", 0.5))
+    is_ai = p >= t
+    score = 0.5 + 0.5 * (p - t) / (1.0 - t) if is_ai else 0.5 * p / t
+    return p, is_ai, min(max(score, 0.0), 1.0)
+
+
 def run_ensemble_inference(pil_img):
     """
-    Returns (score, composite_cam, breakdown). score is the fraction of AI votes,
-    nudged just below 0.5 on a tie so a >= 0.5 threshold agrees with the vote.
+    Returns (score, composite_cam, breakdown).
+
+    With a trained meta-learner and every member available, score is the stacked
+    P(AI) remapped so >= 0.5 means AI at the trained threshold. Otherwise score is
+    the fraction of AI votes, nudged just below 0.5 on a tie so a >= 0.5 threshold
+    agrees with the vote.
     """
     t0 = time.time()
-    scored = [(cfg, p, cam) for cfg, p, cam in score_members(pil_img, with_cam=True) if p is not None]
+    all_scored = score_members(pil_img, with_cam=True)
+    scored = [(cfg, p, cam) for cfg, p, cam in all_scored if p is not None]
     if not scored:
         return None, None, {}
 
     is_ai, ai_votes, n = majority_vote([p for _, p, _ in scored])
-    score = ai_votes / n
-    if not is_ai and score >= 0.5:
-        score = 0.499
+    stacker = load_stacker()
+    stacking = None
+    if stacker is not None and len(scored) == len(all_scored):
+        p_stacked, is_ai, score = stacked_decision(stacker, [p for _, p, _ in scored])
+        stacking = {
+            "meta_learner": "L2-regularized (ridge) logistic regression",
+            "C": stacker.get("C"),
+            "stacked_ai_probability": round(p_stacked, 4),
+            "decision_threshold": round(float(stacker.get("threshold", 0.5)), 4),
+            "member_weights": {cfg["id"]: round(float(w), 4) for (cfg, _, _), w in zip(scored, stacker["coefficients"])},
+            "intercept": round(float(stacker["intercept"]), 4),
+        }
+        strategy = "Stacked Generalization (ridge logistic meta-learner) & Composite Saliency Fusion"
+    else:
+        score = ai_votes / n
+        if not is_ai and score >= 0.5:
+            score = 0.499
+        reason = "meta-learner not trained" if stacker is None else "a member failed to load"
+        strategy = f"Hard Majority Vote fallback ({reason}; ties resolve to real) & Composite Saliency Fusion"
 
     model_results = [{
         "model_id": cfg["id"],
@@ -296,7 +367,8 @@ def run_ensemble_inference(pil_img):
             composite_cam = (composite_cam - composite_cam.min()) / (composite_cam.max() - composite_cam.min() + 1e-8)
 
     breakdown = {
-        "ensemble_strategy": "Hard Majority Vote (ties resolve to real) & Composite Saliency Fusion",
+        "ensemble_strategy": strategy,
+        "stacking": stacking,
         "num_families_evaluated": n,
         "ai_votes": ai_votes,
         "mean_ai_probability": round(float(np.mean([p for _, p, _ in scored])), 4),

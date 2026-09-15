@@ -4,9 +4,7 @@ Label normalization layer.
 Every ensemble member reports its answer in its own vocabulary and class order:
 
   dima806/deepfake_vs_real_image_detection    {0: Real,       1: Fake}
-  umm-maybe/AI-image-detector                 {0: artificial, 1: human}   <- AI is index 0
   Organika/sdxl-detector                      {0: artificial, 1: human}   <- AI is index 0
-  prithivMLmods/Deep-Fake-Detector-v2-Model   {0: Realism,    1: Deepfake}
   SignalScope dual-stream (sigmoid output)    trained with label 1 = AI
 
 Everything downstream works with a single convention: p_ai = probability the
