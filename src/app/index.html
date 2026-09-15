@@ -121,7 +121,7 @@
       <div class="service-grid">
         <div class="tile-card" onclick="switchMode('single')">
           <div class="tile-title" data-i18n="tile1T">Single Image Analysis</div>
-          <div class="tile-desc" data-i18n="tile1D">Stacked 3-model ensemble verdict, attention overlay, measured explanation cues.</div>
+          <div class="tile-desc" data-i18n="tile1D">Stacked 3-model ensemble verdict, saliency overlay, measured explanation cues.</div>
         </div>
         <div class="tile-card" onclick="switchMode('folder')">
           <div class="tile-title" data-i18n="tile2T">Batch Folder Scan</div>
@@ -158,7 +158,7 @@
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
           <h3 class="dropzone-title" data-i18n="dropTitle">Select or drag an image</h3>
-          <p class="dropzone-sub" data-i18n="dropSub">JPEG, PNG or WebP. You get a likelihood verdict, the ensemble breakdown, an attention overlay with measured cues, a degradation re-test, and a provenance metadata check.</p>
+          <p class="dropzone-sub" data-i18n="dropSub">JPEG, PNG or WebP. You get a likelihood verdict, the ensemble breakdown, a saliency overlay with measured cues, a degradation re-test, and a provenance metadata check.</p>
           <button class="btn-gov-primary" onclick="document.getElementById('fileInputSingle').click()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
             <span data-i18n="btnChoose">Choose Image File</span>
@@ -354,7 +354,7 @@
             <li data-i18n="lim1">Trained on one generator: accuracy on newer or unseen generators is not measured and may be substantially lower.</li>
             <li data-i18n="lim2">The dual-stream member sees images at 32×32, so fine high-resolution artifacts in large images are discarded.</li>
             <li data-i18n="lim3">ViT and Swin are near chance on CIFAKE (AUC 0.41 and 0.65), so the CIFAKE-fitted stacker relies almost entirely on the dual-stream model.</li>
-            <li data-i18n="lim4">The attention overlay shows where the ViT member attended; it is not a verified localisation of artifacts.</li>
+            <li data-i18n="lim4">The saliency overlay shows which pixels the dual-stream model's score is most sensitive to; it is not a verified localisation of artifacts.</li>
             <li data-i18n="lim5">Metadata signatures can be stripped or forged; a declared generator is reported as metadata evidence only.</li>
           </ul>
         </div>
@@ -386,7 +386,7 @@
 
         <div class="eval-block">
           <h3 data-i18n="mPipeT">Pipeline</h3>
-          <p data-i18n="mPipeD">Image → Level 1: provenance metadata check (explicit AI-generator signature or C2PA manifest) → Level 2: stacked pixel ensemble → calibrated likelihood → explanation cues, attention overlay and degradation re-test → verdict shown as "likely AI-generated" or "likely real".</p>
+          <p data-i18n="mPipeD">Image → Level 1: provenance metadata check (explicit AI-generator signature or C2PA manifest) → Level 2: stacked pixel ensemble → calibrated likelihood → explanation cues, saliency overlay and degradation re-test → verdict shown as "likely AI-generated" or "likely real".</p>
         </div>
 
         <div class="eval-block">
@@ -396,7 +396,7 @@
 
         <div class="eval-block">
           <h3 data-i18n="mAT">Module A: Explanation</h3>
-          <p data-i18n="mAD">Overlays the ViT member's last-layer attention map (14×14) and lists measured signals: each member's P(AI), its share of the stacked log-odds, the image's high-frequency spectral energy, and any metadata signature. The overlay shows where the model attended; it is not a verified localisation of artifacts.</p>
+          <p data-i18n="mAD">Overlays a SmoothGrad saliency map from the dual-stream model (the member that drives the decision), computed at its 32×32 input and placed back on the image. A deletion check tests whether masking the top 10% most salient pixels moves the score more than masking random pixels. Cues list measured signals: each member's P(AI), its share of the stacked log-odds, the image's high-frequency spectral energy, and any metadata signature. Saliency shows sensitivity, not a verified localisation of artifacts.</p>
         </div>
 
         <div class="eval-block">
@@ -515,7 +515,7 @@
             <div class="member-details-gov">
               <h3 class="member-name-gov" data-i18n="m6Name">Kasak Gohil</h3>
               <span class="member-designation-gov" data-i18n="m6Desig">Computer Vision &amp; Explainability</span>
-              <p class="member-responsibility-gov" data-i18n="m6Role">Module A attention overlay and measured explanation cues.</p>
+              <p class="member-responsibility-gov" data-i18n="m6Role">Module A saliency overlay and measured explanation cues.</p>
             </div>
           </div>
         </div>
@@ -544,12 +544,12 @@
 
         <div class="image-frame-gov">
           <img id="baseImage" class="base-img" src="" alt="Submitted image">
-          <img id="heatmapImage" class="heatmap-img" src="" alt="Attention overlay">
+          <img id="heatmapImage" class="heatmap-img" src="" alt="Saliency overlay">
         </div>
 
         <div class="controls-bar-gov">
           <div class="slider-group-gov">
-            <label for="opacitySlider" data-i18n="heatmapLabel">Attention overlay (ViT)</label>
+            <label for="opacitySlider" data-i18n="heatmapLabel">Saliency overlay (dual-stream model)</label>
             <input type="range" id="opacitySlider" min="0" max="100" value="60" oninput="updateHeatmapOpacity(this.value)">
           </div>
           <span class="res-tag-gov" id="imageResolution">-</span>
