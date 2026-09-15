@@ -5,7 +5,7 @@
 
 SignalScope classifies an image as *likely real* or *likely AI-generated* with a calibrated score. It pairs that verdict with a metadata/provenance check, a saliency overlay with measured cues, and a measured degradation test, all served through a web dashboard and REST/WebSocket API.
 
-▶️ **[Watch the demo video](https://drive.google.com/file/d/1Uye3mYuWi-itzyFl94zQYU0lCldScKJu/view?usp=sharing)**
+▶️ **[Watch the demo video](https://drive.google.com/file/d/1rLY3w_Dz0JCrzayGLjvlkKtZDi9RmhhZ/view?usp=sharing)**
 
 ---
 
@@ -162,7 +162,7 @@ Image (+ optional caption)
 ---
 
 ## 8. Demo Video & Deployment
-* **Demo video (3–5 min):** [Watch on Google Drive](https://drive.google.com/file/d/1Uye3mYuWi-itzyFl94zQYU0lCldScKJu/view?usp=sharing)
+* **Demo video (3–5 min):** [Watch on Google Drive](https://drive.google.com/file/d/1rLY3w_Dz0JCrzayGLjvlkKtZDi9RmhhZ/view?usp=sharing)
 * **Deployed app:** none; run locally per Section 2.
 
 ---
