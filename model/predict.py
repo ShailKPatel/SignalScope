@@ -3,7 +3,7 @@ SignalScope Master Prediction Engine
 Executes 2-Level Cascading Forensic Architecture:
   Level 1: Smart Metadata & Provenance Engine (explicit generator signatures, C2PA)
   Level 2: 3-member stacked ensemble (ViT + Swin + ResNet34/FFT dual-stream), see model/ensemble.py
-Module A renders the ViT attention map as a saliency overlay on both levels.
+Module A renders the dual-stream member's SmoothGrad saliency map on both levels.
 """
 
 import os
@@ -17,11 +17,8 @@ from .metadata import analyze_smart_metadata
 from .multimodal import evaluate_multimodal_consistency
 from .active_defense import analyze_active_defence
 
-# The dual-stream member dominates the stacked decision on CIFAKE but yields no map, so the
-# overlay comes from the ViT member; the caveat travels with it.
-SALIENCY_SOURCE = ("ViT-Base member's last-layer CLS attention (14x14). The stacked decision is driven mainly "
-                   "by the dual-stream member, which produces no map, so this overlay is context, not the "
-                   "decision's evidence")
+SALIENCY_SOURCE = ("SmoothGrad pixel sensitivity of the dual-stream member, the member that drives the "
+                   "stacked decision, computed at its native input resolution")
 
 
 class DetectorUnavailableError(RuntimeError):
@@ -73,6 +70,7 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
     is_level_1_ai = l1.get("is_conclusive_ai", False)
 
     saliency_map = None
+    saliency_check = None
     ensemble_info = {}
 
     if is_level_1_ai:
@@ -83,10 +81,10 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
         detection_level = "Level 1: Smart Metadata & Provenance Engine"
         verdict_label = f"likely AI-generated (Confirmed via Level 1 Metadata: {matched_gen})"
 
-        # Still run the ViT member for a saliency overlay.
+        # Still compute the pixel detector's saliency overlay and its deletion check.
         try:
-            from .pretrained_detector import run_pretrained_inference
-            _, _, saliency_map = run_pretrained_inference(img, model_name="dima806/deepfake_vs_real_image_detection")
+            from .ensemble import dual_stream_saliency
+            saliency_map, saliency_check = dual_stream_saliency(img)
         except Exception as e:
             print(f"Level 1 saliency extraction note: {e}")
 
@@ -101,6 +99,7 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
             ens_prob, ens_cam, ens_info = run_ensemble_inference(img)
             if ens_prob is not None:
                 raw_prob, saliency_map, ensemble_info = ens_prob, ens_cam, ens_info
+                saliency_check = ens_info.get("saliency_check")
         except Exception as e:
             print(f"Multi-Model Ensemble note: {e}")
 
@@ -123,6 +122,7 @@ def predict_image(image_input, caption_text=None, filename="image.jpg"):
     explainability_res = generate_heatmap_and_explanations(
         img, confidence, is_ai_generated,
         saliency_map=saliency_map,
+        saliency_check=saliency_check,
         ensemble_info=ensemble_info,
         metadata_evidence=evidence_text if is_level_1_ai else None,
         saliency_source=SALIENCY_SOURCE,

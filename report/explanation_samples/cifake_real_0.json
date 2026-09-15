@@ -10,8 +10,19 @@
       "dual_stream_freq": -8.7098
     }
   },
+  "saliency_check": {
+    "method": "Deletion test on the dual-stream member",
+    "fraction_masked": 0.1,
+    "logit_original": -8.5799,
+    "logit_shift_top_salient": 0.6229,
+    "logit_shift_random_mean": 1.3603,
+    "p_ai_original": 0.0002,
+    "p_ai_top_salient_masked": 0.0004,
+    "p_ai_random_masked_mean": 0.0012,
+    "salient_exceeds_random": false
+  },
   "summary": "The detector rates this image likely real (score <0.1%). 0 of 3 ensemble members lean AI. This is a likelihood assessment, not proof; the cues below list the measured signals behind it.",
-  "localization_quality": "ViT-Base member's last-layer CLS attention (14x14). The stacked decision is driven mainly by the dual-stream member, which produces no map, so this overlay is context, not the decision's evidence. Shows where the model attended, not a verified localization of artifacts.",
+  "localization_quality": "SmoothGrad pixel sensitivity of the dual-stream member, the member that drives the stacked decision, computed at its native input resolution. Shows which pixels the score is most sensitive to; the deletion check cue tests whether they matter. Not a verified localization of generation artifacts.",
   "cues": [
     {
       "type": "Member: Vision Transformer (ViT)",
@@ -27,6 +38,11 @@
       "type": "Member: Dual-Stream Spatial + 2D FFT Frequency",
       "detail": "SignalScope PyTorch Dual-Stream Backbone (ResNet34 + 2D Fast Fourier Transform (FFT)) scores P(AI) <0.1%. Its share of the stacked log-odds is -8.71 (toward real).",
       "value": "P(AI) <0.1%"
+    },
+    {
+      "type": "Saliency deletion check",
+      "detail": "Replacing the 10% most salient pixels changes the dual-stream log-odds by +0.62; the same number of random pixels changes it by +1.36 (mean of 5 draws). Here salient pixels do not move the score more than random ones, so treat the map with caution.",
+      "value": "salient +0.62 vs random +1.36"
     },
     {
       "type": "Spectral measurement",

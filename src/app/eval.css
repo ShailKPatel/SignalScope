@@ -61,6 +61,51 @@
 .sub-heading { font-size: calc(12px * var(--scale)); font-weight: 800; color: var(--text-muted); margin: 1.1rem 0 0.4rem; text-transform: uppercase; }
 .metric-val-wrap { font-size: calc(12.5px * var(--scale)); text-align: right; }
 
+/* High contrast: styles.css swaps the colour tokens, but many surfaces hard-code light
+   backgrounds, which left light text on white. Force dark surfaces and light text. */
+body.contrast-high {
+  --bg-header: #121212;
+  --gov-gold-light: #333300;
+  --status-real-bg: #002B00;
+  --status-real-text: #7CFF7C;
+  --status-real-border: #7CFF7C;
+  --status-fake-bg: #330000;
+  --status-fake-text: #FF8A8A;
+  --status-fake-border: #FF8A8A;
+}
+body.contrast-high :is(.tile-card, .gov-card, .gov-card-header, .gov-card-body, .gov-dropzone, .certificate-card,
+  .modules-card-gov, .eval-block, .stat-card-gov, .cue-item-gov, .team-member-card-gov, .card-gov-body,
+  .batch-section-gov, .breadcrumb-bar, .table-scroll, .controls-bar-gov, .tab-btn-gov, .tabs-header-gov,
+  .gov-modal-box, .gov-modal-body, .gov-modal-footer, .team-section-gov, .team-header-banner-gov, .cert-header,
+  .ensemble-box, .metric-row-gov, .results-grid > *) {
+  background: #121212 !important;
+  color: #FFFFFF !important;
+  border-color: #FFFF00 !important;
+}
+body.contrast-high :is(.tile-title, .tile-desc, .metric-label-gov, .metric-val-gov, .cue-desc-gov, .cue-header-gov,
+  .cue-value, .tab-heading-gov, .member-name-gov, .member-designation-gov, .member-responsibility-gov, .stat-label-gov,
+  .stat-value-gov, .dropzone-title, .dropzone-sub, .gov-card-title, .section-heading-txt, .eval-block h3, .eval-block p,
+  .eval-block li, .note-muted, .cert-title, .cert-sub, .verdict-subtitle, .tab-summary, .sub-heading, .ensemble-title,
+  .member-sub, .card-tag, .eval-intro, .batch-title, .cm-caption, .cm-head, .team-title-gov, .team-sub-gov,
+  .modal-head, .modal-desc, .breadcrumb-bar, .breadcrumb-bar a, .res-tag-gov, .slider-group-gov label) {
+  color: #FFFFFF !important;
+}
+body.contrast-high .eval-block { border-left-color: #FFFF00 !important; }
+body.contrast-high .table-gov td,
+body.contrast-high .table-gov tr:nth-child(even) td { background: #121212 !important; color: #FFFFFF !important; border-color: #555555 !important; }
+body.contrast-high .table-gov th { background: #000000 !important; color: #FFFF00 !important; border-bottom: 1px solid #FFFF00; }
+body.contrast-high .table-gov tr.row-highlight td { background: #333300 !important; color: #FFFF00 !important; }
+body.contrast-high :is(.tab-btn-gov.active, .menu-item.active, .btn-gov-primary, .lang-toggle-btn.active) { background: #FFFF00 !important; color: #000000 !important; }
+body.contrast-high .tab-btn-gov.active span, body.contrast-high .btn-gov-primary span { color: #000000 !important; }
+body.contrast-high .verdict-banner-gov.ai { background: #330000 !important; border-color: #FF8A8A !important; }
+body.contrast-high .verdict-banner-gov.real { background: #002B00 !important; border-color: #7CFF7C !important; }
+body.contrast-high .verdict-banner-gov.ai :is(.verdict-title-gov, .verdict-score-gov) { color: #FF8A8A !important; }
+body.contrast-high .verdict-banner-gov.real :is(.verdict-title-gov, .verdict-score-gov) { color: #7CFF7C !important; }
+body.contrast-high .contrib.toward-ai { color: #FF8A8A !important; }
+body.contrast-high .contrib.toward-real { color: #7CFF7C !important; }
+body.contrast-high :is(.govt-title, .portal-title, .directorate-title) { color: #FFFF00 !important; }
+body.contrast-high :is(.res-tag-gov, .cert-stamp-badge) { background: #000000 !important; color: #FFFF00 !important; border: 1px solid #FFFF00 !important; }
+
 /* Batch */
 .batch-title { font-size: calc(17px * var(--scale)); font-weight: 800; color: var(--gov-navy); }
 .stat-ai { color: var(--status-fake-text) !important; }
