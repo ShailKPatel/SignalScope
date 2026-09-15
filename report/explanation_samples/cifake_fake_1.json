@@ -1,0 +1,37 @@
+{
+  "image": "test_images/cifake_fake_1.png",
+  "verdict": "likely AI-generated",
+  "score": 0.999,
+  "stacking": {
+    "stacked_ai_probability": 0.999,
+    "member_logit_contributions": {
+      "vit_dima806": 0.3988,
+      "swin_sdxl": 0.3054,
+      "dual_stream_freq": 6.154
+    }
+  },
+  "summary": "The detector rates this image likely AI-generated (score >99.9%). 2 of 3 ensemble members lean AI. This is a likelihood assessment, not proof; the cues below list the measured signals behind it.",
+  "localization_quality": "ViT-Base member's last-layer CLS attention (14x14). The stacked decision is driven mainly by the dual-stream member, which produces no map, so this overlay is context, not the decision's evidence. Shows where the model attended, not a verified localization of artifacts.",
+  "cues": [
+    {
+      "type": "Member: Vision Transformer (ViT)",
+      "detail": "dima806/deepfake_vs_real_image_detection (ViT-Base/16 (in21k), fine-tuned) scores P(AI) 7.2%. Its share of the stacked log-odds is +0.40 (toward AI).",
+      "value": "P(AI) 7.2%"
+    },
+    {
+      "type": "Member: Swin Transformer (SDXL fine-tune)",
+      "detail": "Organika/sdxl-detector (Swin, fine-tuned on Wikimedia vs SDXL pairs) scores P(AI) 98.0%. Its share of the stacked log-odds is +0.31 (toward AI).",
+      "value": "P(AI) 98.0%"
+    },
+    {
+      "type": "Member: Dual-Stream Spatial + 2D FFT Frequency",
+      "detail": "SignalScope PyTorch Dual-Stream Backbone (ResNet34 + 2D Fast Fourier Transform (FFT)) scores P(AI) 99.9%. Its share of the stacked log-odds is +6.15 (toward AI).",
+      "value": "P(AI) 99.9%"
+    },
+    {
+      "type": "Spectral measurement",
+      "detail": "Share of spectral power above half-Nyquist on a native-resolution crop. Reported for inspection only; it is not calibrated as a detector and does not drive the verdict.",
+      "value": "16.26%"
+    }
+  ]
+}

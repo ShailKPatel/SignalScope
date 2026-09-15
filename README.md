@@ -1,149 +1,165 @@
-# SignalScope - Telling Real From Synthetic in the Age of Generative Media
+# SignalScope: Telling Real From Synthetic in the Age of Generative Media
 
-> **SIH - 2026 [Internal Hackathon] | Problem Statement 2 (C-433)**
+> **SIH 2026 [Internal Hackathon] | Problem Statement 2 (C-433)**
 > **Domain:** AI / Media Forensics / Trust & Safety
-> **Target:** 100/100 Points Across Core Task + ALL 7 Bonus Modules (Modules A through G)
+
+SignalScope classifies an image as *likely real* or *likely AI-generated* with a calibrated score. It pairs that verdict with a metadata/provenance check, a saliency overlay with measured cues, and a measured degradation test, all served through a web dashboard and REST/WebSocket API.
 
 ---
 
-## 🌟 1. Overview & Built Modules
+## 1. Built Modules
 
-**SignalScope** is a comprehensive media authenticity verification platform designed to detect AI-generated synthetic imagery, generalize across unseen generator architectures, and provide human-interpretable visual explanations.
-
-### Built Modules
-* ✅ **Mandatory Core Task:** Real-vs-AI-generated image classification with calibrated likelihood confidence score.
-* ✅ **Module A (Headline Bonus):** Faithful visual cue explanations & localized Grad-CAM heatmaps.
-* ✅ **Module B (Bonus):** Multi-class Generator Attribution (Diffusion vs. GAN vs. specific model families).
-* ✅ **Module C (Bonus):** Robustness to Degradation (JPEG compression, resizing, screenshotting).
-* ✅ **Module D (Bonus):** Provenance & Metadata Parser (EXIF + C2PA Content Credentials).
-* ✅ **Module E (Bonus):** Multimodal Image-Text Consistency (CLIP semantic score).
-* ✅ **Module F (Bonus):** Real-Time / Deployable Application (Web UI Dashboard + Bulk/Folder Scan Queue).
-* ✅ **Module G (Bonus):** Active Defence & Adversarial Vulnerability Analysis.
+| Module | Status | What it actually does |
+| :--- | :---: | :--- |
+| **Core** real-vs-AI classifier | ✅ Built | 3-member stacked ensemble; score, verdict, operating point from the CIFAKE test split |
+| **A** Explanation | ✅ Built (limited) | ViT attention overlay + cues from measured signals (member P(AI), each member's share of the stacked log-odds, spectral energy). See limitations: the overlay comes from a member with little weight in the decision |
+| **B** Generator attribution | ❌ Not built | Reports a generator only when file metadata declares one (via Module D) |
+| **C** Robustness to degradation | ✅ Built | Re-encodes the uploaded image at JPEG Q90/70/50/30 and downscales to 75/50/25%, re-scores every variant, reports whether the verdict holds |
+| **D** Metadata & provenance | ✅ Built | EXIF / XMP / PNG text-chunk generator signatures, C2PA manifest read via `c2pa-python` |
+| **E** Multimodal consistency | ❌ Not built | Caption is recorded; no score is computed |
+| **F** Deployable app | ✅ Built | FastAPI REST (`/api/predict`, `/api/predict-batch`), WebSocket (`/ws/analyze`), web dashboard |
+| **G** Active defence | ❌ Not built | No adversarial evaluation is run |
 
 ---
 
-## ⚡ 2. Setup & Quick Run Instructions (Reproducibility < 3 Mins)
+## 2. Setup & Run (about 10 minutes, CPU is enough)
 
-### Prerequisites
-* Python 3.9+
-* `pip` package manager
-
-### Step 1: Clone Repository & Create Virtual Environment
+### Step 1: Clone and create an environment (Python 3.10+)
 ```bash
-git clone https://github.com/your-username/SIGNALSCOPE.git
-cd SIGNALSCOPE
-
-# Create & activate virtual environment
+git clone https://github.com/ShailKPatel/SignalScope.git
+cd SignalScope
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-### Step 2: Install Dependencies
-```bash
 pip install -r requirements.txt
 ```
 
-### Step 3: Launch SignalScope Web Dashboard & API Server
+### Step 2: Download the trained dual-stream weights (87 MB)
+The stacking meta-learner (`retrain/checkpoints/stacking_metalearner.json`) and training metrics (`retrain/checkpoints/metrics.json`) are in the repo. The dual-stream weights are too large for git and ship as a GitHub Release asset:
 ```bash
-python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+curl -L -o retrain/checkpoints/best_model.pt \
+  https://github.com/ShailKPatel/SignalScope/releases/download/v1.0/best_model.pt
 ```
-* **Web UI Dashboard:** Open `http://localhost:8000` in your web browser.
-* **API Documentation (Swagger):** Open `http://localhost:8000/docs`.
+The two pretrained Hugging Face members (ViT and Swin, about 350 MB each) download automatically on the first prediction.
 
-### Step 4: CLI Single & Batch Prediction Test
+Without `best_model.pt` the app still runs, but the meta-learner needs all three members, so it falls back to a majority vote of the two HF models. The reported metrics do not apply to that mode.
+
+### Step 3: Reproduce a prediction from the command line
 ```bash
-# Run prediction via Python interface
-python -c "from model.predict import predict_image; print(predict_image('scope.pdf'))"
+python -c "
+from model.predict import predict_image
+for p in ['test_images/cifake_real_0.png', 'test_images/cifake_fake_0.png']:
+    v = predict_image(p)['verdict']
+    print(p, '->', v['label'], v['confidence_score'], '|', v['ensemble_breakdown']['ensemble_strategy'])
+"
+```
+Expected: `cifake_real_0.png -> likely real`, `cifake_fake_0.png -> likely AI-generated`, strategy `Stacked Generalization (ridge logistic meta-learner)`.
+
+### Step 4: Launch the web dashboard and API
+```bash
+python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+```
+* Dashboard: `http://localhost:8000`
+* API docs (Swagger): `http://localhost:8000/docs`
+
+### Step 5: Smoke tests
+```bash
+python test_ensemble_system.py   # ensemble, stacker math, REST + WebSocket
+python test_live_system.py       # Level 1 metadata path + Level 2 model path
 ```
 
 ---
 
-## 📊 3. Dataset & Evaluation
+## 3. Datasets & Licences
 
-### Dataset: CIFAKE
-All training and testing uses **[CIFAKE](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images)** (`birdy654/cifake-real-and-ai-generated-synthetic-images`):
+| Dataset | Use | Source / licence |
+| :--- | :--- | :--- |
+| **CIFAKE** (Bird & Lotfi, 2024) | Train, validation, test | [Kaggle `birdy654/cifake-real-and-ai-generated-synthetic-images`](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images). Licence "Other" per the dataset page: REAL = CIFAR-10 (Krizhevsky, 2009), FAKE = Stable Diffusion v1.4 generations |
+| 4 CIFAKE test images in `test_images/cifake_*.png` | Smoke tests only | Hugging Face mirror [`dragonintelligence/CIFAKE-image-dataset`](https://huggingface.co/datasets/dragonintelligence/CIFAKE-image-dataset), test split |
+| `test_images/*_sample.png` (Gemini, Grok, ComfyUI, DALL-E) | Level 1 metadata tests only | Flat-colour images generated locally with injected metadata (`test_images/create_metadata_test_samples.py`); not real generator outputs |
 
-| Split | REAL (CIFAR-10) | FAKE (Stable Diffusion v1.4) | Use |
+| Split | REAL | FAKE | Use |
 | :--- | :---: | :---: | :--- |
-| `train/` | 50,000 | 50,000 | 90% training, 10% validation (epoch selection + temperature calibration) |
-| `test/` | 10,000 | 10,000 | Held-out test set, reported metrics only |
+| CIFAKE `train/` 90% | 45,000 | 45,000 | Dual-stream training |
+| CIFAKE `train/` 10% (validation) | 5,000 | 5,000 | Epoch selection, temperature scaling, stacker fit (balanced 4,000-image sample, 5-fold CV) |
+| CIFAKE `test/` | 10,000 | 10,000 | Reported metrics only |
 
-All images are 32x32. The dual-stream model trains at that native resolution, and inference resizes inputs to match. See [retrain/README.md](retrain/README.md) for download and training steps.
-
-### Reported Metrics (CIFAKE Test Split)
-
-> Pending a training run of `retrain/kaggle_train_cifake.ipynb`. Fill this table from the `test` block of the `metrics.json` it produces.
-
-| Metric | CIFAKE Test Split | Target Baseline |
-| :--- | :---: | :---: |
-| **ROC-AUC (Primary Metric)** | _pending_ | 0.820 |
-| **Macro-F1 Score** | _pending_ | 0.780 |
-| **Accuracy @ 0.50 Threshold** | _pending_ | 81.0% |
-| **False-Positive Rate (FPR)** | _pending_ | 5.0% |
+No person images are used anywhere (CIFAR-10 has no person class).
 
 ---
 
-## 🏗️ 4. System Architecture
+## 4. Reported Metrics (CIFAKE test split, 20,000 images)
 
-```
-SignalScope Engine Pipeline:
-Image (+ Optional Caption/Metadata)
-  │
-  ├──> Pre-processing & Data Normalization
-  │
-  ├──> Dual-Stream Model Backbone
-  │     ├── Spatial Branch: EfficientNet / ConvNeXt (Semantic Features)
-  │     └── Frequency Branch: FFT / DCT Spectrum (Upsampling Grid Artifacts)
-  │
-  ├──> Calibrated Probability Engine ("Likely AI-generated")
-  │
-  └──> Bonus Modules Suite
-        ├── Module A: Grad-CAM Heatmap + Grounded Visual Cues
-        ├── Module B: Multi-Class Generator Attribution
-        ├── Module C: Degradation Sensitivity Curves
-        ├── Module D: EXIF & C2PA Cryptographic Provenance Check
-        ├── Module E: CLIP Cross-Modal Text Alignment
-        └── Module G: Active Defence & Failure Analysis
-```
+| Model | ROC-AUC | Macro-F1 | Accuracy | FPR | Confusion (TN / FP / FN / TP) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Stacked ensemble @ 0.5 (deployed)** | **0.9976** | **0.9780** | **97.80%** | **2.35%** | 9765 / 235 / 205 / 9795 |
+| Stacked ensemble @ 5%-val-FPR threshold (0.165) | 0.9976 | 0.9674 | 96.74% | 5.71% | 9429 / 571 / 81 / 9919 |
+| Dual-stream alone (ResNet34 + FFT) | 0.9976 | 0.9774 | 97.74% | 2.63% | 9737 / 263 / 189 / 9811 |
+| Majority vote of 3 members (baseline) | 0.9101 | 0.5906 | 63.82% | 2.06% | 9794 / 206 / 7029 / 2971 |
+| Swin `Organika/sdxl-detector` alone | 0.6454 | 0.5330 | 57.43% | 12.84% | 8716 / 1284 / 7231 / 2769 |
+| ViT `dima806/deepfake_vs_real_image_detection` alone | 0.4142 | 0.3582 | 48.33% | 7.54% | 9246 / 754 / 9581 / 419 |
+
+**Unseen-generator-split AUC:** not measurable by us. Every CIFAKE fake comes from Stable Diffusion v1.4, so no held-out generator exists in the provided data. The organisers' unseen-generator evaluation is the only measure of this.
+
+Source files: `retrain/checkpoints/metrics.json` (dual-stream) and `retrain/checkpoints/stacking_metalearner.json` (`test_metrics`, `test_metrics_at_5pct_fpr`, `test_baselines`). Produced by `retrain/kaggle_one_shot.py`.
 
 ---
 
-## 📁 5. Repository Structure
+## 5. Architecture, Calibration & Robustness
 
 ```
-SIGNALSCOPE/
-├── .gitignore                      # Git exclusion rules
-├── README.md                       # Main reproduction entry point
-├── REQUIREMENTS_AND_SPECIFICATIONS.md # Full project specifications
-├── requirements.txt                # Dependency list
-├── src/
-│   ├── api/
-│   │   └── main.py                 # FastAPI backend server
-│   └── app/                        # Web dashboard frontend (HTML/CSS/JS)
-│       ├── index.html
-│       ├── styles.css
-│       └── app.js
-├── model/                          # Machine learning engine & predict API
-│   ├── predict.py                  # Standardized inference entrypoint
-│   ├── explainability.py           # Grad-CAM heatmap engine (Module A)
-│   ├── attribution.py              # Generator family classifier (Module B)
-│   ├── robustness.py               # Degradation simulator (Module C)
-│   ├── metadata.py                 # EXIF / C2PA parser (Module D)
-│   ├── multimodal.py               # CLIP text-image alignment (Module E)
-│   └── active_defense.py           # Adversarial attack testing (Module G)
-├── retrain/                        # CIFAKE training & evaluation (see retrain/README.md)
-└── report/
-    └── model_report.md             # Standardized 1-page report
+Image (+ optional caption)
+  │
+  ├─ Level 1: Metadata & provenance (model/metadata.py)
+  │     explicit generator signature found? → verdict "likely AI-generated (metadata)"
+  │
+  └─ Level 2: Stacked ensemble (model/ensemble.py)
+        ├─ ViT-Base   dima806/deepfake_vs_real_image_detection   → P(AI)
+        ├─ Swin       Organika/sdxl-detector                     → P(AI)
+        ├─ Dual-stream: ResNet34 spatial + 2D FFT magnitude branch, trained on CIFAKE at 32×32 → P(AI)
+        └─ Meta-learner: ridge logistic regression on logit(P(AI)) of the 3 members
+              (weights: ViT −0.29, Swin +0.17, dual-stream +7.53 on standardized logits)
+  │
+  └─ Modules: A overlay + measured cues · C degradation re-scoring · D metadata report
 ```
+
+* **Calibration:** dual-stream temperature scaling (T = 1.066) fit on validation. The meta-learner is itself a logistic model fit on validation-only out-of-fold predictions, and its decision threshold is 0.5. A low-FPR threshold (≈5% FPR on validation) is also recorded.
+* **Robustness (Module C):** per image, measured rather than simulated. On the bundled samples the verdict held across all JPEG levels. Downscaling a 32×32 fake to 24×24 dropped its score to 0.18, a real failure the curve exposes.
+* **Code map:** `model/predict.py` (entry point `predict_image`), `model/ensemble.py`, `model/explainability.py`, `model/robustness.py`, `model/metadata.py`, `retrain/` (training), `src/api/main.py`, `src/app/`.
 
 ---
 
-## ⚠️ 6. Ethics & Responsible AI Boundaries
-* **In-Scope:** Detection of synthetic imagery in general (scenes, objects, art, architecture, product shots).
-* **Strict Constraints:** Zero features for identifying, profiling, or claiming face-swap deepfakes of real individuals. All outputs are presented responsibly as **likelihood assessments** (*"likely AI-generated"*).
+## 6. Known Limitations
+
+* **The ensemble adds little over the dual-stream model.** On CIFAKE the ViT scores below chance (AUC 0.41) and the Swin is weak (0.65). Both were fine-tuned on high-resolution data and see CIFAKE's 32×32 images upscaled. The meta-learner correctly assigns them near-zero weight.
+* **Explanation faithfulness is limited.** The overlay is the ViT member's attention, and the ViT barely influences the decision. The dual-stream model that drives the decision produces no map. The cues list measured numbers; they do not claim to localize artifacts. Samples: `report/explanation_samples/`.
+* **Single generator, low resolution.** Training data is SD v1.4 at 32×32, so performance on other generators, high-resolution photos, or real-world JPEGs is unmeasured. An earlier prototype on a different dataset (`trained-v1/metrics.json`) fell from 0.93 validation AUC to 0.70 on held-out generators. Expect a similar drop.
+* **Level 1 trusts self-declared metadata.** It is trivially stripped or forged. Absence of a signature is never treated as evidence of authenticity.
+* **CPU latency:** about 10 s per image, because Module C re-scores 7 variants.
 
 ---
 
-## 🎥 7. Demo Video & Deployment Link
-* **Demo Video (3–5 Mins):** `[Insert YouTube / Drive Link Here]`
-* **Live Deployed App:** `http://localhost:8000`
+## 7. Ethics & Responsible Use
+* In scope: synthetic imagery in general (scenes, objects, art). No features identify, profile, or adjudicate claims about real individuals, and no test data contains people.
+* Every output is a likelihood assessment ("likely AI-generated"), never an accusation.
+
+---
+
+## 8. Demo Video & Deployment
+* **Demo video (3–5 min):** _TODO: add link before submission_
+* **Deployed app:** none; run locally per Section 2.
+
+---
+
+## 9. Originality Declaration
+
+All code in this repository was written by the team between 10 and 15 September 2026. No public real-vs-fake notebook was copied. Third-party components used:
+
+| Component | Use | Licence |
+| :--- | :--- | :--- |
+| [`dima806/deepfake_vs_real_image_detection`](https://huggingface.co/dima806/deepfake_vs_real_image_detection) | Frozen ensemble member (ViT) | Apache-2.0 |
+| [`Organika/sdxl-detector`](https://huggingface.co/Organika/sdxl-detector) | Frozen ensemble member (Swin) | CC-BY-NC-3.0 (non-commercial) |
+| torchvision ResNet34 ImageNet weights | Dual-stream spatial backbone initialisation | BSD-3-Clause |
+| PyTorch, Hugging Face Transformers, scikit-learn, FastAPI, Pillow, NumPy, c2pa-python | Libraries | Respective open-source licences |
+| CIFAKE dataset (Bird & Lotfi, 2024) | Training / evaluation data | See Section 3 |
+
+AI coding assistants were used during development, as the rules permit.
