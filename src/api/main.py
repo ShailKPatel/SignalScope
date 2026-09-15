@@ -16,11 +16,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from PIL import Image
 
-from model.predict import predict_image, predict_batch
+from model.predict import predict_image, predict_batch, DetectorUnavailableError
 
 app = FastAPI(
     title="SignalScope Media Authenticity Platform API",
-    description="SIH 2026 Core Authenticity Checker & Bonus Modules A through G",
+    description="SIH 2026 Core Authenticity Checker with Bonus Modules A, C, D, F",
     version="1.0.0"
 )
 
@@ -44,7 +44,8 @@ def health_check():
         "status": "online",
         "service": "SignalScope Engine",
         "version": "1.0.0",
-        "modules_active": ["Core", "Module A", "Module B", "Module C", "Module D", "Module E", "Module F", "Module G"],
+        "modules_active": ["Core", "Module A", "Module C", "Module D", "Module F"],
+        "modules_not_built": ["Module B", "Module E", "Module G"],
         "websocket_endpoint": "/ws/analyze"
     }
 
@@ -59,6 +60,8 @@ async def api_predict(
         image = Image.open(io.BytesIO(contents))
         result = predict_image(image, caption_text=caption, filename=file.filename)
         return JSONResponse(content=result)
+    except DetectorUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to process image: {str(e)}")
 
@@ -76,6 +79,8 @@ async def api_predict_batch(
         
         batch_result = predict_batch(inputs)
         return JSONResponse(content=batch_result)
+    except DetectorUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to process batch files: {str(e)}")
 
@@ -113,7 +118,7 @@ async def websocket_analyze(websocket: WebSocket):
             await asyncio.sleep(0.1)
 
             # Stage 3: Bonus Suite & Grad-CAM Heatmap
-            await websocket.send_json({"type": "progress", "stage": "Forensic Suite", "message": "Extracting Grad-CAM heatmaps, EXIF provenance & CLIP alignment...", "progress": 80})
+            await websocket.send_json({"type": "progress", "stage": "Forensic Suite", "message": "Building saliency overlay, EXIF provenance & degradation re-scores...", "progress": 80})
             
             # Predict
             result = predict_image(pil_img, caption_text=caption, filename=filename)
