@@ -312,41 +312,84 @@ def stacked_decision(stacker, p_ai_values):
     return p, is_ai, min(max(score, 0.0), 1.0)
 
 
-def run_ensemble_inference(pil_img):
+def _fuse(scored, n_members):
     """
-    Returns (score, composite_cam, breakdown).
+    Fuses available member outputs. Returns (score, ai_votes, n, stacking_info or None, strategy).
 
     With a trained meta-learner and every member available, score is the stacked
     P(AI) remapped so >= 0.5 means AI at the trained threshold. Otherwise score is
     the fraction of AI votes, nudged just below 0.5 on a tie so a >= 0.5 threshold
     agrees with the vote.
     """
-    t0 = time.time()
-    all_scored = score_members(pil_img, with_cam=True)
-    scored = [(cfg, p, cam) for cfg, p, cam in all_scored if p is not None]
-    if not scored:
-        return None, None, {}
-
-    is_ai, ai_votes, n = majority_vote([p for _, p, _ in scored])
+    probs = [p for _, p, _ in scored]
+    is_ai, ai_votes, n = majority_vote(probs)
     stacker = load_stacker()
-    stacking = None
-    if stacker is not None and len(scored) == len(all_scored):
-        p_stacked, is_ai, score = stacked_decision(stacker, [p for _, p, _ in scored])
+    if stacker is not None and len(scored) == n_members:
+        p_stacked, is_ai, score = stacked_decision(stacker, probs)
+        # Each member's additive share of the meta-learner's log-odds.
+        x = logit_features([probs], stacker.get("eps", _LOGIT_EPS))[0]
+        contrib = (x - stacker["scaler_mean"]) / stacker["scaler_scale"] * stacker["coefficients"]
         stacking = {
             "meta_learner": "L2-regularized (ridge) logistic regression",
             "C": stacker.get("C"),
             "stacked_ai_probability": round(p_stacked, 4),
             "decision_threshold": round(float(stacker.get("threshold", 0.5)), 4),
             "member_weights": {cfg["id"]: round(float(w), 4) for (cfg, _, _), w in zip(scored, stacker["coefficients"])},
+            "member_logit_contributions": {cfg["id"]: round(float(c), 4) for (cfg, _, _), c in zip(scored, contrib)},
             "intercept": round(float(stacker["intercept"]), 4),
+            "cifake_test_metrics": stacker.get("test_metrics"),
         }
-        strategy = "Stacked Generalization (ridge logistic meta-learner) & Composite Saliency Fusion"
-    else:
-        score = ai_votes / n
-        if not is_ai and score >= 0.5:
-            score = 0.499
-        reason = "meta-learner not trained" if stacker is None else "a member failed to load"
-        strategy = f"Hard Majority Vote fallback ({reason}; ties resolve to real) & Composite Saliency Fusion"
+        return score, ai_votes, n, stacking, "Stacked Generalization (ridge logistic meta-learner)"
+
+    score = ai_votes / n
+    if not is_ai and score >= 0.5:
+        score = 0.499
+    reason = "meta-learner not trained" if stacker is None else "a member failed to load"
+    return score, ai_votes, n, None, f"Hard Majority Vote fallback ({reason}; ties resolve to real)"
+
+
+def score_image(pil_img):
+    """Ensemble score only (no saliency), same fusion as run_ensemble_inference. None if no member loads."""
+    all_scored = score_members(pil_img, with_cam=False)
+    scored = [(cfg, p, cam) for cfg, p, cam in all_scored if p is not None]
+    if not scored:
+        return None
+    return float(_fuse(scored, len(all_scored))[0])
+
+
+def score_images(pil_imgs):
+    """
+    Ensemble scores for several images, HF members batched. The dual-stream member is scored
+    per image through its own transform, because the batched path would resample through 224px
+    and disturb the frequency content it keys on. Entries are None where no member loads.
+    """
+    try:
+        P = score_members_batch([prepare_image(im) for im in pil_imgs])
+    except Exception as e:
+        print(f"Batched scoring note: {e}")
+        return [score_image(im) for im in pil_imgs]
+
+    out = []
+    for im, row in zip(pil_imgs, P):
+        scored = []
+        for cfg, p in zip(ENSEMBLE_MEMBERS, row):
+            if cfg["id"] == "dual_stream_freq":
+                p = evaluate_dual_stream_member(im)[0]
+            if p is not None and not np.isnan(p):
+                scored.append((cfg, float(p), None))
+        out.append(float(_fuse(scored, len(ENSEMBLE_MEMBERS))[0]) if scored else None)
+    return out
+
+
+def run_ensemble_inference(pil_img):
+    """Returns (score, composite_cam, breakdown). See _fuse for how score is formed."""
+    t0 = time.time()
+    all_scored = score_members(pil_img, with_cam=True)
+    scored = [(cfg, p, cam) for cfg, p, cam in all_scored if p is not None]
+    if not scored:
+        return None, None, {}
+
+    score, ai_votes, n, stacking, strategy = _fuse(scored, len(all_scored))
 
     model_results = [{
         "model_id": cfg["id"],

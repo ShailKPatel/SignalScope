@@ -1,110 +1,106 @@
 """
-Module A: Faithful Explanation & Heatmap Engine
-Produces localized visual heatmaps (Grad-CAM) and natural language visual cue explanations.
+Module A: Explanation & Saliency Overlay
+Renders the detector's saliency map (when one exists) and builds cues only from
+measured signals: member model outputs, the stacker's per-member contributions,
+the image's own frequency spectrum, and metadata evidence. Nothing here is
+invented when a signal is missing; the cue is simply omitted.
 """
 
 import base64
 import io
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
-def generate_heatmap_and_explanations(image_pil, confidence, is_ai_generated, generator_family=None, gradcam_numpy_map=None):
+_FFT_SIDE = 256
+
+
+def format_probability(p):
+    """Percent text that never claims certainty: >=0.999 -> ">99.9%", <=0.001 -> "<0.1%" (matches the UI)."""
+    if p >= 0.999:
+        return ">99.9%"
+    if p <= 0.001:
+        return "<0.1%"
+    return f"{p * 100:.1f}%"
+
+
+def high_frequency_energy_ratio(image_pil):
     """
-    Generates a localized heatmap overlay and structured visual cue explanations.
+    Share of spectral power above half-Nyquist, measured on a native-resolution
+    center crop (no resampling, which would itself change the spectrum).
     """
+    g = np.asarray(image_pil.convert("L"), dtype=np.float32)
+    side = min(_FFT_SIDE, *g.shape)
+    top, left = (g.shape[0] - side) // 2, (g.shape[1] - side) // 2
+    g = g[top:top + side, left:left + side]
+    g = g - g.mean()
+    power = np.abs(np.fft.fftshift(np.fft.fft2(g))) ** 2
+    yy, xx = np.indices(power.shape)
+    radius = np.hypot(yy - side / 2, xx - side / 2)
+    return float(power[radius > side / 4].sum() / (power.sum() + 1e-8))
+
+
+def _overlay_base64(width, height, saliency, is_ai_generated):
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    if saliency is not None:
+        h = Image.fromarray((np.clip(saliency, 0, 1) * 255).astype(np.uint8), mode="L")
+        h_arr = np.asarray(h.resize((width, height), Image.Resampling.BILINEAR), dtype=np.float32) / 255.0
+        # JET colormap (red = high, blue = low)
+        r = np.clip(1.5 - np.abs(h_arr * 4.0 - 3.0), 0, 1)
+        g = np.clip(1.5 - np.abs(h_arr * 4.0 - 2.0), 0, 1)
+        b = np.clip(1.5 - np.abs(h_arr * 4.0 - 1.0), 0, 1)
+        a = h_arr * (0.7 if is_ai_generated else 0.25)
+        overlay = Image.fromarray(np.stack([r, g, b, a], axis=-1).__mul__(255).astype(np.uint8), mode="RGBA")
+    buf = io.BytesIO()
+    overlay.save(buf, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
+
+
+def generate_heatmap_and_explanations(image_pil, confidence, is_ai_generated, saliency_map=None,
+                                      ensemble_info=None, metadata_evidence=None, saliency_source=None):
     width, height = image_pil.size
-    
-    # 1. Generate Grad-CAM Heatmap Overlay (Base64 PNG)
-    overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    cues = []
 
-    if gradcam_numpy_map is not None:
-        try:
-            # Resize numpy heatmap to image size
-            h_img = Image.fromarray((gradcam_numpy_map * 255).astype(np.uint8), mode='L').resize((width, height), Image.Resampling.BILINEAR)
-            h_arr = np.array(h_img, dtype=np.float32) / 255.0
+    if metadata_evidence:
+        cues.append({"type": "Metadata signature", "detail": metadata_evidence, "value": "Declared in file"})
 
-            # Colorize with JET colormap formula (Red=High, Yellow=Mid, Blue=Low)
-            r = np.clip(1.5 - np.abs(h_arr * 4.0 - 3.0), 0, 1)
-            g = np.clip(1.5 - np.abs(h_arr * 4.0 - 2.0), 0, 1)
-            b = np.clip(1.5 - np.abs(h_arr * 4.0 - 1.0), 0, 1)
-            a = h_arr * 0.7 if is_ai_generated else h_arr * 0.25
+    members = (ensemble_info or {}).get("family_models") or []
+    contributions = ((ensemble_info or {}).get("stacking") or {}).get("member_logit_contributions") or {}
+    for m in members:
+        detail = f"{m['model_name']} ({m['architecture']}) scores P(AI) {format_probability(m['ai_probability'])}."
+        if m["model_id"] in contributions:
+            c = contributions[m["model_id"]]
+            detail += f" Its share of the stacked log-odds is {c:+.2f} ({'toward AI' if c > 0 else 'toward real'})."
+        cues.append({"type": f"Member: {m['family']}", "detail": detail, "value": f"P(AI) {format_probability(m['ai_probability'])}"})
 
-            rgba = np.stack([r * 255, g * 255, b * 255, a * 255], axis=-1).astype(np.uint8)
-            overlay = Image.fromarray(rgba, mode='RGBA')
-        except Exception as e:
-            print(f"Heatmap rendering note: {e}")
-            overlay = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    hf = high_frequency_energy_ratio(image_pil)
+    cues.append({
+        "type": "Spectral measurement",
+        "detail": ("Share of spectral power above half-Nyquist on a native-resolution crop. Reported for inspection "
+                   "only; it is not calibrated as a detector and does not drive the verdict."),
+        "value": f"{hf * 100:.2f}%",
+    })
 
-    if gradcam_numpy_map is None or overlay.getbbox() is None:
-        draw = ImageDraw.Draw(overlay)
-        if is_ai_generated:
-            # Create simulated Grad-CAM heatmap hotspots in focal regions
-            num_hotspots = np.random.randint(2, 5)
-            for _ in range(num_hotspots):
-                cx = np.random.randint(int(width * 0.2), int(width * 0.8))
-                cy = np.random.randint(int(height * 0.2), int(height * 0.8))
-                rx = np.random.randint(int(width * 0.15), int(width * 0.35))
-                ry = np.random.randint(int(height * 0.15), int(height * 0.35))
-                draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=(255, 60, 60, 160))
-            overlay = overlay.filter(ImageFilter.GaussianBlur(radius=min(width, height) // 15))
-        else:
-            draw.rectangle([0, 0, width, height], fill=(60, 140, 255, 30))
-
-    # Convert heatmap overlay to base64 data URI
-    buffered = io.BytesIO()
-    overlay.save(buffered, format="PNG")
-    heatmap_base64 = "data:image/png;base64," + base64.b64encode(buffered.getvalue()).decode("utf-8")
-
-    # 2. Structured Natural Language Cues
-    if is_ai_generated:
-        cues = [
-            {
-                "type": "Texture & Frequency Artifacts",
-                "detail": "High-frequency Fourier spectrum reveals micro-pattern grid repetition typical of generative upsamplers.",
-                "confidence": round(confidence * 0.92, 2),
-                "severity": "High"
-            },
-            {
-                "type": "Lighting & Shadow Inconsistency",
-                "detail": "Specular reflections on surfaces do not align with the primary environment light source angle.",
-                "confidence": round(confidence * 0.88, 2),
-                "severity": "Medium"
-            },
-            {
-                "type": "Edge & Geometry Distortion",
-                "detail": "Fine structural boundaries exhibit characteristic diffusion smoothing and unnatural edge anti-aliasing.",
-                "confidence": round(confidence * 0.85, 2),
-                "severity": "Medium"
-            }
-        ]
-        summary_text = (
-            f"The image exhibits characteristic synthetic generation artifacts with {round(confidence * 100, 1)}% confidence. "
-            f"Primary anomaly focal regions indicate non-physical reflection geometry and high-frequency spectral grid signatures."
-        )
+    if members:
+        ai_votes = sum(m["is_ai_pred"] for m in members)
+        agreement = f" {ai_votes} of {len(members)} ensemble members lean AI."
     else:
-        cues = [
-            {
-                "type": "Natural Sensor Noise",
-                "detail": "Consistent Bayer filter pattern and uniform ISO camera sensor noise across shadow/highlight regions.",
-                "confidence": round((1 - confidence) * 0.95, 2),
-                "severity": "Normal"
-            },
-            {
-                "type": "Physical Optical Geometry",
-                "detail": "Depth-of-field blur and lens chromatic aberration follow standard physical optical formulas.",
-                "confidence": round((1 - confidence) * 0.90, 2),
-                "severity": "Normal"
-            }
-        ]
-        summary_text = (
-            f"The image displays natural optical depth-of-field and organic camera sensor grain consistent with authentic photography "
-            f"({round((1 - confidence) * 100, 1)}% authenticity likelihood)."
-        )
+        agreement = ""
+    summary_text = (f"The detector rates this image {'likely AI-generated' if is_ai_generated else 'likely real'} "
+                    f"(score {format_probability(confidence)}).{agreement} This is a likelihood assessment, not proof; the cues below list "
+                    f"the measured signals behind it.")
+
+    if saliency_map is not None:
+        localization = (f"{saliency_source or 'Model attention map'}. Shows where the model attended, "
+                        "not a verified localization of artifacts.")
+    else:
+        localization = "Unavailable: no saliency map was produced for this input, so no overlay is drawn."
 
     return {
-        "heatmap_base64": heatmap_base64,
+        "heatmap_base64": _overlay_base64(width, height, saliency_map, is_ai_generated),
+        "has_saliency": saliency_map is not None,
         "cues": cues,
         "summary_text": summary_text,
-        "localization_quality": "High (Grad-CAM Focal Highlight)",
-        "uncertainty_hedged": True
+        "localization_quality": localization,
+        "high_frequency_energy_ratio": round(hf, 5),
+        "uncertainty_hedged": True,
     }
