@@ -1,329 +1,309 @@
-// SignalScope Client Engine - Takniki Vibhag
-// SIH 2026 Internal Hackathon Submission (Problem Statement C-433)
+// SignalScope web client - Team Takneeki Vibhag
+// SIH 2026 Internal Hackathon, Problem Statement 2 (C-433)
+//
+// Static text lives in index.html with data-i18n keys. English is read from the
+// page at load, so HI_STATIC only holds Hindi overrides. UI holds strings built
+// at runtime (verdicts, table cells) in both languages.
 
 let currentResultData = null;
 let currentBatchData = null;
-let activeMode = 'single'; // 'single' | 'folder' | 'team' | 'about'
-let currentLang = 'en'; // 'en' | 'hi'
+let currentBatchFiles = [];
+let activeMode = 'single'; // 'single' | 'folder' | 'eval' | 'about' | 'team'
+let currentLang = 'en';
+let isProcessing = false;
 
-const translations = {
+const EN_STATIC = {};
+
+const HI_STATIC = {
+  modalTitle: "सिग्नलस्कोप के बारे में",
+  modalHead: "वास्तविक बनाम एआई-जनित छवि पहचान",
+  modalDesc: "सिग्नलस्कोप अनुमान लगाता है कि कोई छवि एआई-जनित होने की कितनी संभावना है, उस अनुमान के पीछे के संकेत दिखाता है, और फ़ाइल के उत्पत्ति मेटाडेटा की जांच करता है। यह दृश्य, वस्तुएं, कला और उत्पाद छवियों के लिए है।",
+  modalNote: "हर परिणाम एक संभावना आकलन है, प्रमाण या आरोप नहीं। यह टूल वास्तविक व्यक्तियों की पहचान नहीं करता और न ही उनके बारे में दावे करता है।",
+  modalBtn: "आगे बढ़ें",
+  skipLink: "मुख्य सामग्री पर जाएं",
+  utilTitle: "एसआईएच 2026 आंतरिक हैकाथॉन · समस्या कथन 2 (C-433)",
+  textSize: "पाठ आकार:",
+  btnContrast: "उच्च कंट्रास्ट",
+  hdrKicker: "टीम तकनीकी विभाग",
+  hdrTitle: "सिग्नल स्कोप",
+  hdrSub: "जनरेटिव मीडिया के युग में वास्तविक और सिंथेटिक की पहचान",
+  navSingle: "छवि विश्लेषण",
+  navBatch: "बैच फ़ोल्डर स्कैन",
+  navEval: "मूल्यांकन एवं मेट्रिक्स",
+  navMethod: "कार्यप्रणाली",
+  navTeam: "टीम (6)",
+  tickerLabel: "परिणाम कैसे पढ़ें",
+  tickerText: "स्कोर कैलिब्रेटेड संभावनाएं हैं (\"संभवतः एआई-जनित\" / \"संभवतः वास्तविक\"), प्रमाण नहीं। CIFAKE टेस्ट स्प्लिट: ROC-AUC 0.9976, सटीकता 97.8%, फॉल्स-पॉजिटिव दर 2.35%।",
+  tilesTitle: "सिग्नलस्कोप क्या करता है",
+  tile1T: "एकल छवि विश्लेषण",
+  tile1D: "स्टैक्ड 3-मॉडल एन्सेम्बल निर्णय, अटेंशन ओवरले, मापे गए स्पष्टीकरण संकेत।",
+  tile2T: "बैच फ़ोल्डर स्कैन",
+  tile2D: "पूरे फ़ोल्डर की छवियों को स्कैन करें और किसी भी परिणाम को विस्तार से देखें।",
+  tile3T: "मूल्यांकन एवं मेट्रिक्स",
+  tile3D: "20,000 CIFAKE टेस्ट छवियों पर ROC-AUC, मैक्रो-F1, कन्फ्यूजन मैट्रिक्स और ऑपरेटिंग पॉइंट।",
+  tile4T: "कार्यप्रणाली",
+  tile4D: "आर्किटेक्चर, प्रशिक्षण सेटअप और इस सबमिशन में शामिल मॉड्यूल।",
+  crumbHome: "होम",
+  singleTitle: "छवि विश्लेषण",
+  dropTitle: "छवि चुनें या खींचकर छोड़ें",
+  dropSub: "JPEG, PNG या WebP। आपको संभावना निर्णय, एन्सेम्बल विवरण, मापे गए संकेतों के साथ अटेंशन ओवरले, क्षरण पुनः-परीक्षण और उत्पत्ति मेटाडेटा जांच मिलती है।",
+  btnChoose: "छवि फ़ाइल चुनें",
+  batchTitle: "बैच फ़ोल्डर स्कैन",
+  batchDropTitle: "छवियों का फ़ोल्डर चुनें",
+  batchDropSub: "फ़ोल्डर की हर छवि को स्कोर किया जाता है। आपको सारांश और तालिका मिलती है, और किसी भी छवि का पूरा विश्लेषण खोल सकते हैं।",
+  btnChooseDir: "छवि फ़ोल्डर चुनें",
+  evalTitle: "मूल्यांकन एवं मेट्रिक्स",
+  evalTag: "CIFAKE टेस्ट स्प्लिट · 20,000 छवियां",
+  evalIntro: "प्राथमिक मेट्रिक: ROC-AUC। मुख्य आंकड़े पूर्ण CIFAKE टेस्ट स्प्लिट (10,000 वास्तविक, 10,000 एआई-जनित) पर डिफ़ॉल्ट 0.5 सीमा पर तैनात स्टैक्ड एन्सेम्बल के हैं।",
+  statAucL: "ROC-AUC (प्राथमिक)",
+  statF1L: "मैक्रो-F1",
+  statAccL: "सटीकता @ 0.5",
+  statFprL: "फॉल्स-पॉजिटिव दर @ 0.5",
+  evalDataT: "डेटासेट एवं विभाजन",
+  thSplit: "विभाजन",
+  thImages: "छवियां",
+  thRealFake: "वास्तविक / एआई",
+  thUse: "उपयोग",
+  splitTrain: "ट्रेन (CIFAKE train/ का 90%)",
+  splitTrainUse: "डुअल-स्ट्रीम मॉडल वेट्स",
+  splitVal: "वैलिडेशन (CIFAKE train/ का 10%)",
+  splitValUse: "सर्वश्रेष्ठ epoch, तापमान कैलिब्रेशन, स्टैकिंग मेटा-लर्नर (4,000 छवियों का संतुलित नमूना)",
+  splitTest: "टेस्ट (CIFAKE test/)",
+  splitTestUse: "सभी रिपोर्ट किए गए मेट्रिक्स",
+  dataSource: "स्रोत: CIFAKE (birdy654/cifake-real-and-ai-generated-synthetic-images, Kaggle)। वास्तविक छवियां CIFAR-10 से; एआई छवियां Stable Diffusion v1.4 से; सभी 32×32।",
+  evalCmpT: "टेस्ट स्प्लिट पर हर मॉडल",
+  thModel: "मॉडल",
+  thAcc: "सटीकता",
+  thPrec: "प्रिसिजन",
+  thRecall: "रिकॉल",
+  rowMajority: "बहुमत मतदान (3 सदस्य)",
+  rowStacked: "स्टैक्ड एन्सेम्बल @ 0.5 (तैनात)",
+  rowStackedLow: "स्टैक्ड एन्सेम्बल @ 0.165 (5% वैलिडेशन-FPR बिंदु)",
+  evalCmpNote: "पॉजिटिव क्लास = एआई-जनित। FPR = वास्तविक छवियों का वह हिस्सा जिसे गलती से एआई बताया गया।",
+  evalCmT: "कन्फ्यूजन मैट्रिक्स (टेस्ट स्प्लिट)",
+  cmStacked: "स्टैक्ड एन्सेम्बल @ 0.5 · मैक्रो-F1 0.9780",
+  cmDual: "केवल डुअल-स्ट्रीम @ 0.5 · मैक्रो-F1 0.9774",
+  cmPredReal: "अनुमानित वास्तविक",
+  cmPredAi: "अनुमानित एआई",
+  cmActReal: "वास्तविक में असली",
+  cmActAi: "वास्तव में एआई",
+  evalOpT: "ऑपरेटिंग पॉइंट एवं कैलिब्रेशन",
+  op1: "डिफ़ॉल्ट सीमा 0.5: सटीकता 97.80%, FPR 2.35%।",
+  op2: "कम-चूक विकल्प 0.165 (~5% FPR के लिए वैलिडेशन पर चुना गया): रिकॉल 99.19%, FPR 5.71%।",
+  op3: "डुअल-स्ट्रीम विश्वास को वैलिडेशन पर तापमान स्केलिंग से कैलिब्रेट किया गया (T = 1.066)।",
+  op4: "स्कोर संभावना के रूप में दिखाए जाते हैं; किसी वास्तविक फोटो को गलत चिह्नित करना महंगी त्रुटि मानी जाती है।",
+  evalStackT: "स्टैकिंग मेटा-लर्नर",
+  st1: "हर सदस्य के logit(P(AI)) पर L2 (रिज) लॉजिस्टिक रिग्रेशन; C = 31.6, 5-फोल्ड CV से चुना गया।",
+  st2: "वैलिडेशन पर आउट-ऑफ-फोल्ड: ROC-AUC 0.9977, सटीकता 97.80%।",
+  st3: "सीखे गए वेट: डुअल-स्ट्रीम +7.53, ViT −0.29, Swin +0.17।",
+  st4: "यह उन सदस्यों का वेट घटाकर जो CIFAKE पर काम नहीं करते, सटीकता 63.8% (बहुमत मतदान) से 97.8% तक बढ़ाता है।",
+  evalTrainT: "प्रशिक्षण सेटअप (डुअल-स्ट्रीम सदस्य)",
+  tr1: "बैकबोन: ResNet34 (ImageNet-प्रीट्रेन्ड) + 2D-FFT फ्रीक्वेंसी शाखा",
+  tr2: "मूल 32×32 इनपुट, कोई अपसैंपलिंग नहीं",
+  tr3: "6 epoch, बैच 256, AdamW (lr 3e-4, wd 0.01), कोसाइन शेड्यूल, मिक्स्ड प्रिसिजन",
+  tr4: "ऑगमेंटेशन: रैंडम JPEG पुनः-संपीड़न (Q50–95), रिफ्लेक्ट-पैड क्रॉप, फ्लिप, रंग जिटर",
+  tr5: "सर्वश्रेष्ठ epoch वैलिडेशन ROC-AUC पर चुना गया",
+  tr6: "Kaggle GPU पर लगभग 20 मिनट में प्रशिक्षित",
+  evalUnseenT: "अनदेखे जनरेटर पर प्रदर्शन",
+  evalUnseenD: "CIFAKE में केवल एक जनरेटर (Stable Diffusion v1.4) है, इसलिए इसमें अनदेखे-जनरेटर का विभाजन नहीं है और हम वह AUC स्वयं नहीं माप सकते। आयोजक अपने अलग रखे गए सेट पर हमारे predict इंटरफ़ेस से कुल और अनदेखे-जनरेटर AUC की गणना करते हैं।",
+  evalLimT: "ज्ञात सीमाएं",
+  lim1: "एक ही जनरेटर पर प्रशिक्षित: नए या अनदेखे जनरेटरों पर सटीकता मापी नहीं गई है और काफी कम हो सकती है।",
+  lim2: "डुअल-स्ट्रीम सदस्य छवियों को 32×32 पर देखता है, इसलिए बड़ी छवियों के सूक्ष्म उच्च-रिज़ॉल्यूशन आर्टिफैक्ट छूट जाते हैं।",
+  lim3: "ViT और Swin CIFAKE पर लगभग अनुमान-स्तर पर हैं (AUC 0.41 और 0.65), इसलिए CIFAKE पर फिट स्टैकर लगभग पूरी तरह डुअल-स्ट्रीम मॉडल पर निर्भर है।",
+  lim4: "अटेंशन ओवरले दिखाता है कि ViT सदस्य ने कहाँ ध्यान दिया; यह आर्टिफैक्ट का सत्यापित स्थानीयकरण नहीं है।",
+  lim5: "मेटाडेटा हस्ताक्षर हटाए या नकली बनाए जा सकते हैं; घोषित जनरेटर केवल मेटाडेटा साक्ष्य के रूप में बताया जाता है।",
+  methodTitle: "कार्यप्रणाली",
+  mModulesT: "इस सबमिशन के मॉड्यूल",
+  chipCore: "कोर: वास्तविक बनाम एआई क्लासिफायर",
+  chipA: "A: स्पष्टीकरण",
+  chipC: "C: मजबूती",
+  chipD: "D: उत्पत्ति एवं मेटाडेटा",
+  chipF: "F: तैनात करने योग्य वेब ऐप",
+  mNotD: "इस सबमिशन में शामिल नहीं: B (जनरेटर एट्रिब्यूशन), E (छवि-पाठ संगति), G (सक्रिय रक्षा)।",
+  mPipeT: "पाइपलाइन",
+  mPipeD: "छवि → स्तर 1: उत्पत्ति मेटाडेटा जांच (स्पष्ट एआई-जनरेटर हस्ताक्षर या C2PA मेनिफेस्ट) → स्तर 2: स्टैक्ड पिक्सेल एन्सेम्बल → कैलिब्रेटेड संभावना → स्पष्टीकरण संकेत, अटेंशन ओवरले और क्षरण पुनः-परीक्षण → निर्णय \"संभवतः एआई-जनित\" या \"संभवतः वास्तविक\"।",
+  mCoreT: "कोर: स्टैक्ड 3-मॉडल एन्सेम्बल",
+  mCoreD: "सदस्य: ViT-Base (dima806/deepfake_vs_real_image_detection), Swin (Organika/sdxl-detector), और मूल 32×32 पर CIFAKE पर प्रशिक्षित हमारा ResNet34 + 2D-FFT डुअल-स्ट्रीम मॉडल। हर सदस्य का P(AI) CIFAKE वैलिडेशन छवियों पर फिट रिज लॉजिस्टिक स्टैकिंग मेटा-लर्नर से जोड़ा जाता है।",
+  mAT: "मॉड्यूल A: स्पष्टीकरण",
+  mAD: "ViT सदस्य का अंतिम-परत अटेंशन मैप (14×14) ओवरले करता है और मापे गए संकेत सूचीबद्ध करता है: हर सदस्य का P(AI), स्टैक्ड log-odds में उसका हिस्सा, छवि की उच्च-आवृत्ति स्पेक्ट्रल ऊर्जा, और कोई भी मेटाडेटा हस्ताक्षर। ओवरले दिखाता है कि मॉडल ने कहाँ ध्यान दिया; यह आर्टिफैक्ट का सत्यापित स्थानीयकरण नहीं है।",
+  mCT: "मॉड्यूल C: क्षरण के प्रति मजबूती",
+  mCD: "अपलोड की गई छवि को JPEG गुणवत्ता 90/70/50/30 पर पुनः एन्कोड और 75/50/25% तक छोटा करता है, मूल और हर संस्करण को उसी पिक्सेल एन्सेम्बल से दोबारा स्कोर करता है, और बताता है कि हर चरण पर निर्णय बना रहा या नहीं।",
+  mDT: "मॉड्यूल D: उत्पत्ति एवं मेटाडेटा",
+  mDD: "EXIF, XMP और PNG टेक्स्ट फ़ील्ड, और मौजूद होने पर C2PA कंटेंट क्रेडेंशियल्स पढ़ता है। स्पष्ट एआई-जनरेटर हस्ताक्षर मेटाडेटा साक्ष्य के रूप में बताया जाता है और स्तर 1 पर निर्णय करता है; अन्यथा पिक्सेल एन्सेम्बल निर्णय करता है।",
+  mFT: "मॉड्यूल F: तैनात करने योग्य वेब ऐप",
+  mFD: "FastAPI बैकएंड (एकल-छवि और बैच एंडपॉइंट) के साथ यह द्विभाषी डैशबोर्ड: ड्रैग-एंड-ड्रॉप अपलोड, फ़ोल्डर स्कैन, समायोज्य ओवरले, पाठ-आकार और उच्च-कंट्रास्ट नियंत्रण।",
+  teamTitle: "टीम तकनीकी विभाग",
+  teamSub: "एसआईएच 2026 आंतरिक हैकाथॉन · समस्या कथन 2 (C-433) · टीम लीडर: राजवी चौहान · 6/6 सदस्य · पंजीकृत",
+  cardLbl: "टीम सदस्य",
+  cardLblLead: "टीम लीडर",
+  m1Badge: "टीम लीड",
+  m1Name: "राजवी चौहान",
+  m1Desig: "टीम लीडर एवं एआई अनुसंधान प्रमुख",
+  m1Role: "टीम समन्वय, मॉडल प्रशिक्षण, डेटा विभाजन और फ्रीक्वेंसी-डोमेन फीचर्स।",
+  m2Badge: "मॉड्यूल C एवं D",
+  m2Name: "दिव्येश प्रजापति",
+  m2Desig: "उत्पत्ति एवं मजबूती",
+  m2Role: "मॉड्यूल D EXIF/C2PA मेटाडेटा पार्सर और मॉड्यूल C क्षरण पुनः-परीक्षण।",
+  m3Badge: "मॉड्यूल F",
+  m3Name: "सर्वेश मुदलियार",
+  m3Desig: "फुल-स्टैक इंजीनियर",
+  m3Role: "मॉड्यूल F वेब डैशबोर्ड, सुलभता सुविधाएं और FastAPI एकीकरण।",
+  m4Badge: "अनुसंधान",
+  m4Name: "शाह हेनिल संदीपकुमार",
+  m4Desig: "मल्टीमॉडल एवं मूल्यांकन",
+  m4Role: "मल्टीमॉडल छवि-पाठ अनुसंधान और मूल्यांकन रिपोर्टिंग।",
+  m5Badge: "एआई कोर",
+  m5Name: "शैल किरण पटेल",
+  m5Desig: "सिस्टम आर्किटेक्ट",
+  m5Role: "कोर आर्किटेक्चर, स्टैक्ड-एन्सेम्बल प्रशिक्षण पाइपलाइन और तैनाती।",
+  m6Badge: "मॉड्यूल A",
+  m6Name: "कसक गोहिल",
+  m6Desig: "कंप्यूटर विजन एवं स्पष्टीकरण",
+  m6Role: "मॉड्यूल A अटेंशन ओवरले और मापे गए स्पष्टीकरण संकेत।",
+  certHeader: "संभावना आकलन",
+  heatmapLabel: "अटेंशन ओवरले (ViT)",
+  ensT: "निर्णय कैसे लिया गया",
+  tabA: "A · स्पष्टीकरण",
+  tabC: "C · मजबूती",
+  tabD: "D · उत्पत्ति",
+  headA: "निर्णय के पीछे मापे गए संकेत",
+  headC: "JPEG संपीड़न और छोटा करने पर निर्णय",
+  lblPixelVerdict: "मूल छवि पर पिक्सेल डिटेक्टर (मेटाडेटा अनदेखा)",
+  lblRating: "स्थिरता",
+  lblJpeg70: "JPEG Q70 पर निर्णय बना रहा",
+  lblResize50: "50% आकार पर निर्णय बना रहा",
+  lblJpegCurve: "JPEG पुनः-संपीड़न (एआई-संभावना स्कोर)",
+  lblResizeCurve: "आकार घटाना (एआई-संभावना स्कोर)",
+  headD: "उत्पत्ति एवं फ़ाइल मेटाडेटा",
+  lblExif: "EXIF मेटाडेटा",
+  lblC2pa: "C2PA कंटेंट क्रेडेंशियल्स",
+  lblCamera: "कैमरा रिकॉर्ड",
+  lblDeclaredGen: "मेटाडेटा में घोषित जनरेटर",
+  lblMetaAssess: "आकलन",
+  batchResT: "बैच स्कैन परिणाम",
+  statTotal: "स्कैन की गई छवियां",
+  statAi: "संभवतः एआई-जनित",
+  statReal: "संभवतः वास्तविक",
+  statLatency: "कुल समय",
+  thFile: "फ़ाइल",
+  thVerdict: "निर्णय",
+  thScore: "एआई-संभावना",
+  thLevel: "निर्णय का आधार",
+  thAction: "विवरण",
+  footerText: "सिग्नलस्कोप · टीम तकनीकी विभाग · एसआईएच 2026 आंतरिक हैकाथॉन, समस्या कथन 2 (C-433) · शैक्षणिक हैकाथॉन परियोजना, भारत सरकार से संबद्ध नहीं।"
+};
+
+const UI = {
   en: {
-    modalTitle: "IMPORTANT PUBLIC ADVISORY / मुख्य सार्वजनिक परामर्श",
-    modalTitleEng: "Media Authenticity & Misinformation Prevention Portal",
-    modalDescEng: "Welcome to SignalScope. This platform analyzes submitted imagery using neural forensic classification and Grad-CAM visual anomaly localization to evaluate synthetic media likelihood.",
-    modalTitleHin: "मीडिया प्रामाणिकता एवं भ्रामक सूचना रोकथाम पोर्टल",
-    modalDescHin: "सिग्नलस्कोप पोर्टल में आपका स्वागत है। यह मंच सिंथेटिक मीडिया और डीपफेक छवियों की संभावना का मूल्यांकन करने के लिए फॉरेंसिक विश्लेषण प्रदान करता है।",
-    btnModalClose: "PROCEED TO PORTAL / पोर्टल पर आगे बढ़ें",
-    skipLink: "Skip to main content",
-    govSubTitleTop: "SignalScope Media Forensics & Authenticity Engine",
-    textSizeLabel: "Text Size:",
-    btnContrast: "High Contrast",
-    govtOfIndia: "SIGNALSCOPE FORENSIC ENGINE",
-    mainPortalTitle: "SIGNAL SCOPE",
-    directorate: "Media Verification & Authenticity Platform",
-    emblemSub: "AUTHENTICITY ENGINE",
-    leader1Name: "Shail Patel",
-    leader1Role: "Team Leader (Takniki Vibhag)",
-    leader2Name: "Rajvi Chauhan",
-    leader2Role: "Principal AI Research Lead",
-    menuSingle: "Single Image Submission Desk",
-    menuFolder: "Directory Batch Audit Desk",
-    menuTeam: "Team Directorate Members (6)",
-    menuDirectives: "Technical Methodology",
-    tickerLabel: "PUBLIC INTEREST",
-    tickerText: "Independent media analysis desk created to counter AI-generated synthetic media, deepfakes, and fake news. Evaluation standard: Calibrated Likelihood Assessment.",
-    serviceGridTitle: "Forensic Verification Desks & Services",
-    tollFree: "Helpdesk: 1800-SIH-2026 (Toll Free)",
-    tile1Title: "Single Artifact Inspection",
-    tile1Desc: "Neural classification & visual Grad-CAM heatmap localization desk.",
-    tile2Title: "Directory Batch Audit",
-    tile2Desc: "High-throughput bulk image scanning for departmental compliance.",
-    tile3Title: "Architecture Attribution",
-    tile3Desc: "Identify Diffusion, GAN, or Transformer generator origins (Module B).",
-    tile4Title: "Multimodal Claim Check",
-    tile4Desc: "CLIP semantic alignment for checking image-caption claim consistency (Module E).",
-    breadcrumbHome: "Home",
-    breadcrumbCurrentSingle: "Single Artifact Submission Desk",
-    breadcrumbCurrentFolder: "Directory Batch Audit Desk",
-    breadcrumbCurrentTeam: "Team Directorate & Project Contributors (6)",
-    breadcrumbCurrentAbout: "Technical Methodology & Forensic Specifications",
-    cardTitleSingle: "Single Artifact Submission Desk",
-    ackSingle: "Ref: SIG-2026-DESK-A",
-    dropTitleSingle: "Select or Drag Image File for Forensic Testing",
-    dropSubSingle: "Upload single image artifact (JPEG, PNG, WebP) to perform neural classification, Grad-CAM visual anomaly localization, generator architecture attribution, and metadata provenance evaluation.",
-    btnChooseSingle: "Choose Image File",
-    captionLabel: "Multimodal Claim Verification (Module E)",
-    captionPlaceholder: "Enter associated text caption, claim statement, or news context to verify CLIP semantic match...",
-    cardTitleFolder: "Directory Batch Audit Desk",
-    ackFolder: "Ref: SIG-2026-AUDIT-B",
-    dropTitleFolder: "Select Directory Folder for High-Throughput Audit",
-    dropSubFolder: "Submit complete image directories for automated high-throughput media verification, batch threat statistics, and departmental compliance reporting.",
-    btnChooseFolder: "Choose Image Directory",
-    teamSectionTitle: "Team Directorate & Project Contributors (Takniki Vibhag)",
-    teamSectionSub: "SIH 2026 • Problem Statement C-433",
-    m1Name: "Shail Patel",
-    m1Desig: "Team Leader & System Architect",
-    m1Role: "Overall project coordination, core architecture design, and SIH 2026 pipeline deployment.",
-    m1Badge: "Lead Contributor",
-    m2Name: "Rajvi Chauhan",
-    m2Desig: "Principal AI Research Lead",
-    m2Role: "Neural network training, generalisation splits, and frequency domain artifact extraction.",
-    m2Badge: "AI Core",
-    m3Name: "Kasak Gohil",
-    m3Desig: "Computer Vision & Grad-CAM Specialist",
-    m3Role: "Module A Explainability engine, visual cue localization, and Layer-CAM heatmap generation.",
-    m3Badge: "Module A Lead",
-    m4Name: "Henil Shah",
-    m4Desig: "Multimodal NLP & CLIP Alignment Lead",
-    m4Role: "Module E text-image semantic matching, claim consistency verification, and prompt auditing.",
-    m4Badge: "Module E Lead",
-    m5Name: "Divyesh Prajapati",
-    m5Desig: "Security & Active Defense Specialist",
-    m5Role: "Module D EXIF/C2PA metadata parser and Module G adversarial attack testing framework.",
-    m5Badge: "Module D & G Lead",
-    m6Name: "Sarvesh Mudaliar",
-    m6Desig: "Web Infrastructure & Full-Stack Engineer",
-    m6Role: "Module F Real-time web application dashboard, GIGW UI design system, and FastAPI integration.",
-    m6Badge: "Module F Lead",
-    aboutHeading: "Technical Methodology & Forensic Framework Specifications",
-    aboutSub: "SIH 2026 C-433 Technical Spec",
-    methodCoreTitle: "1. Mandatory Core Task: Unseen Generator Generalisation",
-    methodCoreDesc: "SignalScope uses a transfer-learning convolutional backbone paired with spatial noise residual extraction (FFT/DCT high-frequency artifact analysis). Models are trained on the CIFAKE train split and evaluated on its held-out test split (CIFAR-10 photos vs. Stable Diffusion v1.4 images) under calibrated ROC-AUC metrics.",
-    methodModATitle: "2. Bonus Module A: Faithful Visual Explanations (Grad-CAM)",
-    methodModADesc: "Provides localized visual saliency heatmaps highlighting exact pixel-level anomalies such as texture warping, irregular specular reflections, and anatomical flaws. Cites grounded natural language points without over-claiming certainty.",
-    methodModBTitle: "3. Bonus Module B: Generator Family & Model Architecture Attribution",
-    methodModBDesc: "Classifies generator families into Latent Diffusion, Generative Adversarial Networks (GANs), and Autoregressive Transformer architectures. Provides granular probability distributions across specific underlying models.",
-    methodModCTitle: "4. Bonus Module C: Robustness Under Image Degradation Vectors",
-    methodModCDesc: "Evaluates prediction resilience under severe lossy compression (JPEG Q30–Q90), downsampling, spatial noise addition, and social media platform re-encoding pipelines.",
-    methodModDTitle: "5. Bonus Module D: Provenance, EXIF & Cryptographic C2PA Verification",
-    methodModDDesc: "Extracts hardware camera EXIF records and validates Coalition for Content Provenance and Authenticity (C2PA) digital signatures to detect synthetic header tampering.",
-    methodModETitle: "6. Bonus Module E: Multimodal Image-Text Alignment & Claim Verification",
-    methodModEDesc: "Employs CLIP cross-modal semantic embeddings to evaluate alignment between submitted image content and accompanying news captions, identifying out-of-context misrepresentation.",
-    methodModFTitle: "7. Bonus Module F: Real-time Web Dashboard & REST API Architecture",
-    methodModFDesc: "Full-stack web application built following GIGW 3.0 government accessibility standards, backed by FastAPI asynchronous microservices for low-latency batch image scanning.",
-    methodModGTitle: "8. Bonus Module G: Active Defense & Adversarial Attack Vulnerability Testing",
-    methodModGDesc: "Tests classifier robustness against adversarial perturbation attacks (FGSM, PGD, spatial blurring) and applies targeted defensive smoothing to maintain detection reliability.",
-    certHeader: "FORENSIC VERIFICATION REPORT",
-    certSub: "Calibrated Likelihood Standards • SignalScope Certificate",
-    certStamp: "EVALUATED",
-    verdictSubtitle: "Probability Assessment Under Module Core",
-    heatmapLabel: "Grad-CAM Heatmap Overlay",
-    tabA: "Module A (Explanations)",
-    tabB: "Module B (Attribution)",
-    tabC: "Module C (Robustness)",
-    tabD: "Module D (Metadata)",
-    tabE: "Module E (Multimodal)",
-    tabG: "Module G (Defense)",
-    headTabA: "Headline Visual Artifact Cites & Explanations",
-    headTabB: "Generator Family & Model Architecture Attribution",
-    lblAttrFamily: "Predicted Generator Family",
-    lblAttrModel: "Likely Architecture Model",
-    lblFamProb: "Family Probability Breakdown",
-    headTabC: "Robustness Under Image Degradation Vectors",
-    lblRobustRating: "Overall Stability Rating",
-    lblRobustJpeg: "Stable Under JPEG Q70 Compression",
-    lblJpegCurve: "JPEG Compression Degradation Curve",
-    headTabD: "Provenance & Cryptographic Header Inspection",
-    lblExif: "EXIF Metadata Status",
-    lblC2pa: "C2PA Signed Manifest Status",
-    lblCamera: "Hardware Camera Record",
-    lblMetaAssessment: "Integrity Assessment",
-    headTabE: "Multimodal Image-Text Alignment & Claim Consistency",
-    lblCaptionText: "Target Claim Text",
-    lblClipScore: "CLIP Semantic Alignment Score",
-    lblMultiAssessment: "Alignment Verdict",
-    headTabG: "Adversarial Defense & Vulnerability Testing",
-    batchResultsTitle: "Bulk Directory Audit Summary Results",
-    statTotal: "Total Submitted Artifacts",
-    statAi: "Probable Synthetic",
-    statReal: "Probable Authentic Real",
-    statLatency: "Total Processing Latency",
-    thFilename: "Filename",
-    thVerdict: "Verdict",
-    thConfidence: "Confidence Score",
-    thModel: "Attribution Architecture",
-    thActions: "Actions",
-    btnInspect: "Inspect Artifact",
-    footerTitle: "SIGNAL SCOPE",
-    footerDesc: "Independent Media Forensics & Authenticity Platform.",
-    quickLinks: "",
-    eventLabel: "",
-    eventVal: "",
-    teamLabel: "",
-    teamVal: "",
-    psLabel: "",
-    psVal: "",
-    compliance: "",
-    disclaimerBox: "",
-    footerCopyright: "SignalScope Media Forensics & Authenticity Engine"
+    crumbSingle: "Analyse an Image",
+    crumbFolder: "Batch Folder Scan",
+    crumbEval: "Evaluation & Metrics",
+    crumbAbout: "Methodology",
+    crumbTeam: "Team",
+    verdictAi: "LIKELY AI-GENERATED",
+    verdictReal: "LIKELY REAL",
+    scoreSub: "AI-likelihood score",
+    level1: "Metadata signature",
+    level2: "Pixel ensemble",
+    analysing: "Analysing image…",
+    analysingSub: name => `Running the detector on ${name}. Please wait.`,
+    analysingBatch: n => `Analysing ${n} images…`,
+    analysingBatchSub: "Large folders can take a while. Please wait.",
+    invalidFile: "Please select a valid image file (JPEG, PNG, WebP).",
+    noImages: "No image files found in the selected folder.",
+    apiError: "The SignalScope backend could not analyse this input: ",
+    inspect: "Open",
+    present: "Present",
+    absent: "Not found",
+    signed: "Manifest found",
+    unsigned: "No manifest",
+    unknown: "Not recorded",
+    stable: "Kept",
+    changed: "Changed",
+    na: "N/A",
+    notDeclared: "None declared",
+    original: "Original",
+    quality: "JPEG Q",
+    member: "Member",
+    contrib: "share of decision",
+    stackedP: "Stacked P(AI)",
+    threshold: "threshold",
+    fusion: "Fusion",
+    votes: (a, n) => `${a} of ${n} members lean AI`,
+    opPoint: (acc, fpr) => `At this threshold on the CIFAKE test split: accuracy ${acc}, false-positive rate ${fpr}.`,
+    level1Note: gen => `Decided at Level 1: the file's metadata declares an AI generator (${gen}). The pixel ensemble was not needed for this verdict.`,
+    noEnsemble: "No ensemble breakdown is available for this result.",
+    robustUnavailable: "Robustness re-test unavailable for this image."
   },
   hi: {
-    modalTitle: "मुख्य सार्वजनिक परामर्श / IMPORTANT PUBLIC ADVISORY",
-    modalTitleEng: "SIH 2026 Media Authenticity & Misinformation Prevention Portal",
-    modalDescEng: "Welcome to SignalScope by Team Takniki Vibhag. This platform analyzes submitted imagery using neural forensic classification and Grad-CAM visual anomaly localization to evaluate synthetic media likelihood under SIH 2026 Problem Statement C-433.",
-    modalTitleHin: "एसआईएच 2026 मीडिया प्रामाणिकता एवं भ्रामक सूचना रोकथाम पोर्टल",
-    modalDescHin: "टीम तकनीकी विभाग के सिग्नलस्कोप पोर्टल में आपका स्वागत है। यह मंच एसआईएच 2026 समस्या कथन C-433 के तहत सिंथेटिक मीडिया और डीपफेक छवियों की संभावना का मूल्यांकन करने के लिए फॉरेंसिक विश्लेषण प्रदान करता है।",
-    btnModalClose: "पोर्टल पर आगे बढ़ें / PROCEED TO PORTAL",
-    skipLink: "मुख्य सामग्री पर जाएं",
-    govSubTitleTop: "एसआईएच 2026 आंतरिक हैकाथॉन प्रविष्टि • टीम तकनीकी विभाग",
-    textSizeLabel: "पाठ आकार:",
-    btnContrast: "उच्च विपरीत",
-    govtOfIndia: "एसआईएच 2026 फॉरेंसिक इंजन",
-    mainPortalTitle: "तकनीकी विभाग",
-    directorate: "तकनीकी मीडिया सत्यापन एवं भ्रामक सूचना निवारण प्रणाली",
-    emblemSub: "एसआईएच 2026 C-433",
-    leader1Name: "शैल पटेल",
-    leader1Role: "टीम लीडर (तकनीकी विभाग)",
-    leader2Name: "राजवी चौहान",
-    leader2Role: "प्रधान एआई अनुसंधान प्रमुख",
-    menuSingle: "एकल छवि प्रस्तुति डेस्क",
-    menuFolder: "निर्देशिका बैच लेखापरीक्षा डेस्क",
-    menuTeam: "टीम निदेशालय के सदस्य (6)",
-    menuDirectives: "तकनीकी कार्यप्रणाली",
-    tickerLabel: "जनहित सूचना",
-    tickerText: "एआई-जनरेटेड सिंथेटिक मीडिया, डीपफेक और फर्जी खबरों की रोकथाम के लिए निर्मित स्वतंत्र मीडिया विश्लेषण डेस्क। मूल्यांकन मानक: कैलिब्रेटेड संभावना आकलन।",
-    serviceGridTitle: "फॉरेंसिक सत्यापन डेस्क और सेवाएं",
-    tollFree: "हेल्पडेस्क: 1800-SIH-2026 (टोल फ्री)",
-    tile1Title: "एकल कलाकृति निरीक्षण",
-    tile1Desc: "तंत्रिका वर्गीकरण और दृश्य ग्रैड-कैम विसंगति स्थानीयकरण डेस्क।",
-    tile2Title: "निर्देशिका बैच लेखापरीक्षा",
-    tile2Desc: "विभागीय अनुपालन के लिए उच्च-थ्रूपुट थोक छवि स्कैनिंग।",
-    tile3Title: "आर्किटेक्चर एट्रिब्यूशन",
-    tile3Desc: "डिफ्यूज़न, GAN या ट्रांसफॉर्मर जनरेटर मूल की पहचान करें (मॉड्यूल B)।",
-    tile4Title: "मल्टीमॉडल दावा जांच",
-    tile4Desc: "छवि-कैप्शन दावे की निरंतरता की जांच के लिए CLIP सिमेंटिक संरेखण (मॉड्यूल E)।",
-    breadcrumbHome: "होम",
-    breadcrumbCurrentSingle: "एकल कलाकृति प्रस्तुति डेस्क",
-    breadcrumbCurrentFolder: "निर्देशिका बैच लेखापरीक्षा डेस्क",
-    breadcrumbCurrentTeam: "टीम निदेशालय एवं परियोजना योगदानकर्ता (6)",
-    breadcrumbCurrentAbout: "तकनीकी कार्यप्रणाली एवं फॉरेंसिक विनिर्देश",
-    cardTitleSingle: "एकल कलाकृति प्रस्तुति डेस्क",
-    ackSingle: "संदर्भ: SIG-2026-DESK-A",
-    dropTitleSingle: "फॉरेंसिक परीक्षण के लिए छवि फ़ाइल चुनें या खींचें",
-    dropSubSingle: "तंत्रिका वर्गीकरण, ग्रैड-कैम दृश्य विसंगति स्थानीयकरण, जनरेटर आर्किटेक्चर एट्रिब्यूशन और मेटाडेटा उत्पत्ति मूल्यांकन करने के लिए एकल छवि कलाकृति (JPEG, PNG, WebP) अपलोड करें।",
-    btnChooseSingle: "छवि फ़ाइल चुनें",
-    captionLabel: "मल्टीमॉडल दावा सत्यापन (मॉड्यूल E)",
-    captionPlaceholder: "CLIP सिमेंटिक मिलान की पुष्टि करने के लिए संबंधित पाठ कैप्शन, दावा कथन या समाचार संदर्भ दर्ज करें...",
-    cardTitleFolder: "निर्देशिका बैच लेखापरीक्षा डेस्क",
-    ackFolder: "संदर्भ: SIG-2026-AUDIT-B",
-    dropTitleFolder: "उच्च-थ्रूपुट लेखापरीक्षा के लिए निर्देशिका फ़ोल्डर चुनें",
-    dropSubFolder: "स्वचालित उच्च-थ्रूपुट मीडिया सत्यापन, बैच खतरे के आंकड़ों और विभागीय अनुपालन रिपोर्टिंग के लिए पूर्ण चित्र निर्देशिका जमा करें।",
-    btnChooseFolder: "छवि निर्देशिका चुनें",
-    teamSectionTitle: "टीम निदेशालय एवं परियोजना योगदानकर्ता (तकनीकी विभाग)",
-    teamSectionSub: "एसआईएच 2026 • समस्या कथन C-433",
-    m1Name: "शैल पटेल",
-    m1Desig: "टीम लीडर एवं सिस्टम आर्किटेक्ट",
-    m1Role: "समग्र परियोजना समन्वय, कोर आर्किटेक्चर डिज़ाइन और एसआईएच 2026 पाइपलाइन तैनाती।",
-    m1Badge: "प्रमुख योगदानकर्ता",
-    m2Name: "राजवी चौहान",
-    m2Desig: "प्रधान एआई अनुसंधान प्रमुख",
-    m2Role: "न्यूरल नेटवर्क प्रशिक्षण, सामान्यीकरण विभाजन और आवृत्ति डोमेन कलाकृति निष्कर्षण।",
-    m2Badge: "एआई कोर",
-    m3Name: "कसक गोहिल",
-    m3Desig: "कंप्यूटर विजन एवं ग्रैड-कैम विशेषज्ञ",
-    m3Role: "मॉड्यूल A स्पष्टीकरण इंजन, दृश्य संकेत स्थानीयकरण और लेयर-कैम हीटमैप निर्माण।",
-    m3Badge: "मॉड्यूल A प्रमुख",
-    m4Name: "हेनिल शाह",
-    m4Desig: "मल्टीमॉडल एनएलपी एवं CLIP संरेखण प्रमुख",
-    m4Role: "मॉड्यूल E पाठ-छवि सिमेंटिक मिलान, दावा निरंतरता सत्यापन और प्रॉम्प्ट लेखापरीक्षा।",
-    m4Badge: "मॉड्यूल E प्रमुख",
-    m5Name: "दिव्येश प्रजापति",
-    m5Desig: "सुरक्षा एवं सक्रिय रक्षा विशेषज्ञ",
-    m5Role: "मॉड्यूल D EXIF/C2PA मेटाडेटा पार्सर और मॉड्यूल G प्रतिकूल हमला परीक्षण ढांचा।",
-    m5Badge: "मॉड्यूल D एवं G प्रमुख",
-    m6Name: "सर्वेश मुदलियार",
-    m6Desig: "वेब इंफ्रास्ट्रक्चर एवं फुल-स्टैक इंजीनियर",
-    m6Role: "मॉड्यूल F वास्तविक समय वेब एप्लिकेशन डैशबोर्ड, GIGW UI डिज़ाइन सिस्टम और FastAPI एकीकरण।",
-    m6Badge: "मॉड्यूल F प्रमुख",
-    aboutHeading: "तकनीकी कार्यप्रणाली एवं फॉरेंसिक ढांचा विनिर्देश",
-    aboutSub: "एसआईएच 2026 C-433 तकनीकी विवरण",
-    methodCoreTitle: "1. अनिवार्य कोर कार्य: अनदेखे जनरेटर का सामान्यीकरण",
-    methodCoreDesc: "सिग्नलस्कोप ट्रांसफर-लर्निंग कॉन्वोल्यूशनल बैकबोन के साथ स्थानिक शोर अवशिष्ट निष्कर्षण (FFT/DCT उच्च-आवृत्ति कलाकृति विश्लेषण) का उपयोग करता है। मॉडल CIFAKE ट्रेन स्प्लिट पर प्रशिक्षित होते हैं और इसके अलग रखे गए टेस्ट स्प्लिट (CIFAR-10 फ़ोटो बनाम Stable Diffusion v1.4 छवियाँ) पर कैलिब्रेटेड ROC-AUC मेट्रिक्स के तहत मूल्यांकित किए जाते हैं।",
-    methodModATitle: "2. बोनस मॉड्यूल A: विश्वसनीय दृश्य स्पष्टीकरण (Grad-CAM)",
-    methodModADesc: "सटीक पिक्सेल-स्तरीय विसंगतियों जैसे टेक्सचर वारपिंग, अनियमित स्पेक्युलर परावर्तन और शारीरिक त्रुटियों को उजागर करने वाले स्थानीयकृत दृश्य गर्मी मानचित्र (हीटमैप) प्रदान करता है।",
-    methodModBTitle: "3. बोनस मॉड्यूल B: जनरेटर परिवार एवं मॉडल आर्किटेक्चर एट्रिब्यूशन",
-    methodModBDesc: "जनरेटर परिवारों को लेटेंट डिफ्यूज़न, जनरेटिव एडवर्सरियल नेटवर्क (GAN) और ऑटोरेग्रेसिव ट्रांसफॉर्मर आर्किटेक्चर में वर्गीकृत करता है। विशिष्ट अंतर्निहित मॉडलों में विस्तृत संभावना वितरण प्रदान करता है।",
-    methodModCTitle: "4. बोनस मॉड्यूल C: छवि क्षरण वैक्टर के तहत मजबूती",
-    methodModCDesc: "गंभीर हानिकारक संपीड़न (JPEG Q30-Q90), डाउनसैंपलिंग, स्थानिक शोर जोड़ने और सोशल मीडिया री-एंकोडिंग पाइपलाइनों के तहत पूर्वानुमान स्थिरता का मूल्यांकन करता है।",
-    methodModDTitle: "5. बोनस मॉड्यूल D: उत्पत्ति, EXIF एवं क्रिप्टोग्राफिक C2PA सत्यापन",
-    methodModDDesc: "हार्डवेयर कैमरा EXIF रिकॉर्ड निकालता है और सिंथेटिक हेडर हेरफेर का पता लगाने के लिए सामग्री उत्पत्ति और प्रामाणिकता गठबंधन (C2PA) डिजिटल हस्ताक्षरों को सत्यापित करता है।",
-    methodModETitle: "6. बोनस मॉड्यूल E: मल्टीमॉडल छवि-पाठ संरेखण एवं दावा सत्यापन",
-    methodModEDesc: "जमा की गई छवि सामग्री और संलग्न समाचार कैप्शन के बीच संरेखण का मूल्यांकन करने के लिए CLIP क्रॉस-मॉडल सिमेंटिक एम्बेडिंग का उपयोग करता है, जिससे संदर्भ से बाहर गलत प्रस्तुति की पहचान होती है।",
-    methodModFTitle: "7. बोनस मॉड्यूल F: वास्तविक समय वेब डैशबोर्ड एवं REST API आर्किटेक्चर",
-    methodModFDesc: "GIGW 3.0 सरकारी पहुंच मानकों के अनुसार निर्मित फुल-स्टैक वेब एप्लिकेशन, जो कम-विलंबता थोक छवि स्कैनिंग के लिए FastAPI एसिंक्रोनस माइक्रोसर्विसेज द्वारा संचालित है।",
-    methodModGTitle: "8. बोनस मॉड्यूल G: सक्रिय रक्षा एवं प्रतिकूल हमला भेद्यता परीक्षण",
-    methodModGDesc: "प्रतिकूल गड़बड़ी हमलों (FGSM, PGD, स्थानिक धुंधलापन) के खिलाफ क्लासिफायर की मजबूती का परीक्षण करता है और पहचान विश्वसनीयता बनाए रखने के लिए लक्षित रक्षात्मक स्मूथिंग लागू करता है।",
-    certHeader: "फॉरेंसिक सत्यापन रिपोर्ट",
-    certSub: "कैलिब्रेटेड संभावना मानक • सिग्नलस्कोप प्रमाणपत्र",
-    certStamp: "मूल्यांकित",
-    verdictSubtitle: "मॉड्यूल कोर के तहत संभावना आकलन",
-    heatmapLabel: "ग्रैड-कैम हीटमैप ओवरले",
-    tabA: "मॉड्यूल A (स्पष्टीकरण)",
-    tabB: "मॉड्यूल B (एट्रिब्यूशन)",
-    tabC: "मॉड्यूल C (मजबूती)",
-    tabD: "मॉड्यूल D (मेटाडेटा)",
-    tabE: "मॉड्यूल E (मल्टीमॉडल)",
-    tabG: "मॉड्यूल G (रक्षा)",
-    headTabA: "मुख्य दृश्य कलाकृति उद्धरण एवं स्पष्टीकरण",
-    headTabB: "जनरेटर परिवार एवं मॉडल आर्किटेक्चर एट्रिब्यूशन",
-    lblAttrFamily: "अनुमानित जनरेटर परिवार",
-    lblAttrModel: "संभावित आर्किटेक्चर मॉडल",
-    lblFamProb: "परिवार संभावना विवरण",
-    headTabC: "छवि क्षरण वैक्टर के तहत मजबूती",
-    lblRobustRating: "समग्र स्थिरता रेटिंग",
-    lblRobustJpeg: "JPEG Q70 संपीड़न के तहत स्थिर",
-    lblJpegCurve: "JPEG संपीड़न क्षरण वक्र",
-    headTabD: "उत्पत्ति एवं क्रिप्टोग्राफिक हेडर निरीक्षण",
-    lblExif: "EXIF मेटाडेटा स्थिति",
-    lblC2pa: "C2PA हस्ताक्षरित मेनिफेस्ट स्थिति",
-    lblCamera: "हार्डवेयर कैमरा रिकॉर्ड",
-    lblMetaAssessment: "सत्यनिष्ठा मूल्यांकन",
-    headTabE: "मल्टीमॉडल छवि-पाठ संरेखण एवं दावा निरंतरता",
-    lblCaptionText: "लक्ष्य दावा पाठ",
-    lblClipScore: "CLIP सिमेंटिक संरेखण स्कोर",
-    lblMultiAssessment: "संरेखण निर्णय",
-    headTabG: "प्रति-प्रतिकूल रक्षा एवं भेद्यता परीक्षण",
-    batchResultsTitle: "थोक निर्देशिका लेखापरीक्षा सारांश परिणाम",
-    statTotal: "कुल जमा कलाकृतियां",
-    statAi: "संभावित सिंथेटिक (एआई)",
-    statReal: "संभावित प्रामाणिक (वास्तविक)",
-    statLatency: "कुल प्रसंस्करण विलंबता",
-    thFilename: "फ़ाइल का नाम",
-    thVerdict: "निर्णय",
-    thConfidence: "विश्वास स्कोर",
-    thModel: "एट्रिब्यूशन आर्किटेक्चर",
-    thActions: "कार्रवाई",
-    btnInspect: "कलाकृति का निरीक्षण करें",
-    footerTitle: "तकनीकी विभाग • TAKNIKI VIBHAG",
-    footerDesc: "स्मार्ट इंडिया हैकाथॉन (एसआईएच 2026) के लिए निर्मित स्वतंत्र मीडिया फॉरेंसिक मंच। सिंथेटिक मीडिया के स्वचालित वर्गीकरण, दृश्य विसंगति स्थानीयकरण और जनरेटर एट्रिब्यूशन के लिए डिज़ाइन किया गया।",
-    quickLinks: "हैकाथॉन विवरण",
-    eventLabel: "कार्यक्रम:",
-    eventVal: "एसआईएच 2026 आंतरिक हैकाथॉन",
-    teamLabel: "टीम:",
-    teamVal: "तकनीकी विभाग",
-    psLabel: "समस्या कथन:",
-    psVal: "C-433",
-    compliance: "अस्वीकरण",
-    disclaimerBox: "सिग्नलस्कोप (तकनीकी विभाग) एक अकादमिक परियोजना है। यह भारत सरकार या किसी भी मंत्रालय से संबद्ध या स्वीकृत नहीं है।",
-    footerCopyright: "सिग्नलस्कोप मीडिया फॉरेंसिक सुइट • एसआईएच 2026 के लिए टीम तकनीकी विभाग द्वारा निर्मित"
+    crumbSingle: "छवि विश्लेषण",
+    crumbFolder: "बैच फ़ोल्डर स्कैन",
+    crumbEval: "मूल्यांकन एवं मेट्रिक्स",
+    crumbAbout: "कार्यप्रणाली",
+    crumbTeam: "टीम",
+    verdictAi: "संभवतः एआई-जनित",
+    verdictReal: "संभवतः वास्तविक",
+    scoreSub: "एआई-संभावना स्कोर",
+    level1: "मेटाडेटा हस्ताक्षर",
+    level2: "पिक्सेल एन्सेम्बल",
+    analysing: "छवि का विश्लेषण हो रहा है…",
+    analysingSub: name => `${name} पर डिटेक्टर चल रहा है। कृपया प्रतीक्षा करें।`,
+    analysingBatch: n => `${n} छवियों का विश्लेषण हो रहा है…`,
+    analysingBatchSub: "बड़े फ़ोल्डर में कुछ समय लग सकता है। कृपया प्रतीक्षा करें।",
+    invalidFile: "कृपया एक वैध छवि फ़ाइल (JPEG, PNG, WebP) चुनें।",
+    noImages: "चयनित फ़ोल्डर में कोई छवि फ़ाइल नहीं मिली।",
+    apiError: "सिग्नलस्कोप बैकएंड इस इनपुट का विश्लेषण नहीं कर सका: ",
+    inspect: "खोलें",
+    present: "मौजूद",
+    absent: "नहीं मिला",
+    signed: "मेनिफेस्ट मिला",
+    unsigned: "कोई मेनिफेस्ट नहीं",
+    unknown: "दर्ज नहीं",
+    stable: "बना रहा",
+    changed: "बदला",
+    na: "लागू नहीं",
+    notDeclared: "कोई घोषित नहीं",
+    original: "मूल",
+    quality: "JPEG Q",
+    member: "सदस्य",
+    contrib: "निर्णय में हिस्सा",
+    stackedP: "स्टैक्ड P(AI)",
+    threshold: "सीमा",
+    fusion: "संयोजन",
+    votes: (a, n) => `${n} में से ${a} सदस्य एआई की ओर`,
+    opPoint: (acc, fpr) => `CIFAKE टेस्ट स्प्लिट पर इस सीमा पर: सटीकता ${acc}, फॉल्स-पॉजिटिव दर ${fpr}।`,
+    level1Note: gen => `स्तर 1 पर निर्णय: फ़ाइल का मेटाडेटा एक एआई जनरेटर (${gen}) घोषित करता है। इस निर्णय के लिए पिक्सेल एन्सेम्बल की आवश्यकता नहीं थी।`,
+    noEnsemble: "इस परिणाम के लिए कोई एन्सेम्बल विवरण उपलब्ध नहीं है।",
+    robustUnavailable: "इस छवि के लिए मजबूती पुनः-परीक्षण उपलब्ध नहीं है।"
   }
 };
 
-function safeSetText(id, text) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.innerText = text;
-  }
+function t(key, ...args) {
+  const entry = (UI[currentLang] && UI[currentLang][key]) ?? UI.en[key];
+  return typeof entry === 'function' ? entry(...args) : (entry ?? key);
 }
 
-function safeSetPlaceholder(id, placeholder) {
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Probabilities never display as a flat 0% or 100%: they are likelihoods, not certainty.
+function pct(x, digits = 1) {
+  if (typeof x !== 'number') return t('na');
+  if (x >= 0.999) return '>99.9%';
+  if (x <= 0.001) return '<0.1%';
+  return `${(x * 100).toFixed(digits)}%`;
+}
+
+function setText(id, text) {
   const el = document.getElementById(id);
-  if (el) {
-    el.placeholder = placeholder;
-  }
+  if (el) el.textContent = text;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    if (!(el.dataset.i18n in EN_STATIC)) EN_STATIC[el.dataset.i18n] = el.textContent;
+  });
   setupDragAndDrop();
   checkHashRoute();
   window.addEventListener('hashchange', checkHashRoute);
@@ -336,11 +316,8 @@ function closeModal() {
 
 function adjustFontSize(delta) {
   document.body.classList.remove('font-sm', 'font-lg');
-  if (delta === -1) {
-    document.body.classList.add('font-sm');
-  } else if (delta === 1) {
-    document.body.classList.add('font-lg');
-  }
+  if (delta === -1) document.body.classList.add('font-sm');
+  else if (delta === 1) document.body.classList.add('font-lg');
 }
 
 function toggleContrast() {
@@ -348,265 +325,57 @@ function toggleContrast() {
 }
 
 function checkHashRoute() {
-  const hash = window.location.hash.toLowerCase();
-  if (hash === '#about' || hash === '#directives' || hash === '#methodology') {
-    switchMode('about');
-  } else if (hash === '#team') {
-    switchMode('team');
-  } else if (hash === '#folder' || hash === '#batch') {
-    switchMode('folder');
-  } else if (hash === '#single') {
-    switchMode('single');
-  }
+  const routes = {
+    '#single': 'single', '#folder': 'folder', '#batch': 'folder',
+    '#eval': 'eval', '#metrics': 'eval', '#evaluation': 'eval',
+    '#about': 'about', '#methodology': 'about', '#team': 'team'
+  };
+  const mode = routes[window.location.hash.toLowerCase()];
+  if (mode) switchMode(mode);
 }
 
 function setLanguage(lang) {
   currentLang = lang;
-  const t = translations[lang];
+  document.documentElement.lang = lang;
+  document.getElementById('btnLangEN')?.classList.toggle('active', lang === 'en');
+  document.getElementById('btnLangHI')?.classList.toggle('active', lang === 'hi');
 
-  const btnEn = document.getElementById('btnLangEN');
-  const btnHi = document.getElementById('btnLangHI');
-  if (btnEn) btnEn.classList.toggle('active', lang === 'en');
-  if (btnHi) btnHi.classList.toggle('active', lang === 'hi');
-
-  safeSetText('txtModalTitle', t.modalTitle);
-  safeSetText('txtModalTitleEng', t.modalTitleEng);
-  safeSetText('txtModalDescEng', t.modalDescEng);
-  safeSetText('txtModalTitleHin', t.modalTitleHin);
-  safeSetText('txtModalDescHin', t.modalDescHin);
-  safeSetText('txtBtnModalClose', t.btnModalClose);
-
-  safeSetText('txtSkipLink', t.skipLink);
-  safeSetText('txtGovSubTitleTop', t.govSubTitleTop);
-  safeSetText('txtTextSizeLabel', t.textSizeLabel);
-  safeSetText('btnContrast', t.btnContrast);
-  safeSetText('txtGovtOfIndia', t.govtOfIndia);
-  safeSetText('txtMainPortalTitle', t.mainPortalTitle);
-  safeSetText('txtDirectorate', t.directorate);
-  safeSetText('txtEmblemSub', t.emblemSub);
-
-  safeSetText('txtLeader1Name', t.leader1Name);
-  safeSetText('txtLeader1Role', t.leader1Role);
-  safeSetText('txtLeader2Name', t.leader2Name);
-  safeSetText('txtLeader2Role', t.leader2Role);
-
-  safeSetText('txtMenuSingle', t.menuSingle);
-  safeSetText('txtMenuFolder', t.menuFolder);
-  safeSetText('txtMenuTeam', t.menuTeam);
-  safeSetText('txtMenuDirectives', t.menuDirectives);
-
-  safeSetText('txtTickerLabel', t.tickerLabel);
-  safeSetText('txtTickerText', t.tickerText);
-
-  safeSetText('txtServiceGridTitle', t.serviceGridTitle);
-  safeSetText('txtTollFree', t.tollFree);
-  safeSetText('txtTile1Title', t.tile1Title);
-  safeSetText('txtTile1Desc', t.tile1Desc);
-  safeSetText('txtTile2Title', t.tile2Title);
-  safeSetText('txtTile2Desc', t.tile2Desc);
-  safeSetText('txtTile3Title', t.tile3Title);
-  safeSetText('txtTile3Desc', t.tile3Desc);
-  safeSetText('txtTile4Title', t.tile4Title);
-  safeSetText('txtTile4Desc', t.tile4Desc);
-
-  safeSetText('txtBreadcrumbHome', t.breadcrumbHome);
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    el.textContent = (lang === 'hi' && HI_STATIC[key]) || EN_STATIC[key] || el.textContent;
+  });
   updateBreadcrumbText();
 
-  safeSetText('txtCardTitleSingle', t.cardTitleSingle);
-  safeSetText('txtAckSingle', t.ackSingle);
-  safeSetText('txtDropTitleSingle', t.dropTitleSingle);
-  safeSetText('txtDropSubSingle', t.dropSubSingle);
-  safeSetText('txtBtnChooseSingle', t.btnChooseSingle);
-  safeSetText('txtCaptionLabel', t.captionLabel);
-  safeSetPlaceholder('captionInput', t.captionPlaceholder);
-
-  safeSetText('txtCardTitleFolder', t.cardTitleFolder);
-  safeSetText('txtAckFolder', t.ackFolder);
-  safeSetText('txtDropTitleFolder', t.dropTitleFolder);
-  safeSetText('txtDropSubFolder', t.dropSubFolder);
-  safeSetText('txtBtnChooseFolder', t.btnChooseFolder);
-
-  safeSetText('txtTeamSectionTitle', t.teamSectionTitle);
-  safeSetText('txtTeamSectionSub', t.teamSectionSub);
-  safeSetText('txtM1Name', t.m1Name);
-  safeSetText('txtM1Desig', t.m1Desig);
-  safeSetText('txtM1Role', t.m1Role);
-  safeSetText('txtM1Badge', t.m1Badge);
-
-  safeSetText('txtM2Name', t.m2Name);
-  safeSetText('txtM2Desig', t.m2Desig);
-  safeSetText('txtM2Role', t.m2Role);
-  safeSetText('txtM2Badge', t.m2Badge);
-
-  safeSetText('txtM3Name', t.m3Name);
-  safeSetText('txtM3Desig', t.m3Desig);
-  safeSetText('txtM3Role', t.m3Role);
-  safeSetText('txtM3Badge', t.m3Badge);
-
-  safeSetText('txtM4Name', t.m4Name);
-  safeSetText('txtM4Desig', t.m4Desig);
-  safeSetText('txtM4Role', t.m4Role);
-  safeSetText('txtM4Badge', t.m4Badge);
-
-  safeSetText('txtM5Name', t.m5Name);
-  safeSetText('txtM5Desig', t.m5Desig);
-  safeSetText('txtM5Role', t.m5Role);
-  safeSetText('txtM5Badge', t.m5Badge);
-
-  safeSetText('txtM6Name', t.m6Name);
-  safeSetText('txtM6Desig', t.m6Desig);
-  safeSetText('txtM6Role', t.m6Role);
-  safeSetText('txtM6Badge', t.m6Badge);
-
-  safeSetText('txtAboutHeading', t.aboutHeading);
-  safeSetText('txtAboutSub', t.aboutSub);
-  safeSetText('txtMethodCoreTitle', t.methodCoreTitle);
-  safeSetText('txtMethodCoreDesc', t.methodCoreDesc);
-  safeSetText('txtMethodModATitle', t.methodModATitle);
-  safeSetText('txtMethodModADesc', t.methodModADesc);
-  safeSetText('txtMethodModBTitle', t.methodModBTitle);
-  safeSetText('txtMethodModBDesc', t.methodModBDesc);
-  safeSetText('txtMethodModCTitle', t.methodModCTitle);
-  safeSetText('txtMethodModCDesc', t.methodModCDesc);
-  safeSetText('txtMethodModDTitle', t.methodModDTitle);
-  safeSetText('txtMethodModDDesc', t.methodModDDesc);
-  safeSetText('txtMethodModETitle', t.methodModETitle);
-  safeSetText('txtMethodModEDesc', t.methodModEDesc);
-  safeSetText('txtMethodModFTitle', t.methodModFTitle);
-  safeSetText('txtMethodModFDesc', t.methodModFDesc);
-  safeSetText('txtMethodModGTitle', t.methodModGTitle);
-  safeSetText('txtMethodModGDesc', t.methodModGDesc);
-
-  safeSetText('txtCertHeader', t.certHeader);
-  safeSetText('txtCertSub', t.certSub);
-  safeSetText('txtCertStamp', t.certStamp);
-  safeSetText('verdictSubtitle', t.verdictSubtitle);
-  safeSetText('txtHeatmapLabel', t.heatmapLabel);
-
-  safeSetText('txtTabA', t.tabA);
-  safeSetText('txtTabB', t.tabB);
-  safeSetText('txtTabC', t.tabC);
-  safeSetText('txtTabD', t.tabD);
-  safeSetText('txtTabE', t.tabE);
-  safeSetText('txtTabG', t.tabG);
-
-  safeSetText('txtHeadTabA', t.headTabA);
-  safeSetText('txtHeadTabB', t.headTabB);
-  safeSetText('lblAttrFamily', t.lblAttrFamily);
-  safeSetText('lblAttrModel', t.lblAttrModel);
-  safeSetText('lblFamProb', t.lblFamProb);
-
-  safeSetText('txtHeadTabC', t.headTabC);
-  safeSetText('lblRobustRating', t.lblRobustRating);
-  safeSetText('lblRobustJpeg', t.lblRobustJpeg);
-  safeSetText('lblJpegCurve', t.lblJpegCurve);
-
-  safeSetText('txtHeadTabD', t.headTabD);
-  safeSetText('lblExif', t.lblExif);
-  safeSetText('lblC2pa', t.lblC2pa);
-  safeSetText('lblCamera', t.lblCamera);
-  safeSetText('lblMetaAssessment', t.lblMetaAssessment);
-
-  safeSetText('txtHeadTabE', t.headTabE);
-  safeSetText('lblCaptionText', t.lblCaptionText);
-  safeSetText('lblClipScore', t.lblClipScore);
-  safeSetText('lblMultiAssessment', t.lblMultiAssessment);
-
-  safeSetText('txtHeadTabG', t.headTabG);
-
-  safeSetText('txtBatchResultsTitle', t.batchResultsTitle);
-  safeSetText('txtStatTotal', t.statTotal);
-  safeSetText('txtStatAi', t.statAi);
-  safeSetText('txtStatReal', t.statReal);
-  safeSetText('txtStatLatency', t.statLatency);
-
-  safeSetText('txtThFilename', t.thFilename);
-  safeSetText('txtThVerdict', t.thVerdict);
-  safeSetText('txtThConfidence', t.thConfidence);
-  safeSetText('txtThModel', t.thModel);
-  safeSetText('txtThActions', t.thActions);
-
-  safeSetText('txtFooterTitle', t.footerTitle);
-  safeSetText('txtFooterDesc', t.footerDesc);
-  safeSetText('txtQuickLinks', t.quickLinks);
-  safeSetText('txtEventLabel', t.eventLabel);
-  safeSetText('txtEventVal', t.eventVal);
-  safeSetText('txtTeamLabel', t.teamLabel);
-  safeSetText('txtTeamVal', t.teamVal);
-  safeSetText('txtPsLabel', t.psLabel);
-  safeSetText('txtPsVal', t.psVal);
-  safeSetText('txtCompliance', t.compliance);
-  safeSetText('txtDisclaimerBox', t.disclaimerBox);
-  safeSetText('txtFooterCopyright', t.footerCopyright);
-
-  if (currentResultData) {
-    renderSingleResult(currentResultData);
-  }
-
-  if (currentBatchData) {
-    renderBatchResult(currentBatchData);
-  }
+  if (currentResultData) renderSingleResult(currentResultData);
+  if (currentBatchData) renderBatchResult(currentBatchData);
 }
 
 function updateBreadcrumbText() {
-  const t = translations[currentLang];
-  const el = document.getElementById('txtBreadcrumbCurrent');
-  if (!el) return;
-
-  if (activeMode === 'single') {
-    el.innerText = t.breadcrumbCurrentSingle;
-  } else if (activeMode === 'folder') {
-    el.innerText = t.breadcrumbCurrentFolder;
-  } else if (activeMode === 'team') {
-    el.innerText = t.breadcrumbCurrentTeam;
-  } else if (activeMode === 'about') {
-    el.innerText = t.breadcrumbCurrentAbout;
-  }
+  const keys = { single: 'crumbSingle', folder: 'crumbFolder', eval: 'crumbEval', about: 'crumbAbout', team: 'crumbTeam' };
+  setText('txtBreadcrumbCurrent', t(keys[activeMode]));
 }
 
 function switchMode(mode) {
   activeMode = mode;
-  
-  const btnSingle = document.getElementById('btnMenuSingle');
-  const btnFolder = document.getElementById('btnMenuFolder');
-  const btnTeam = document.getElementById('btnMenuTeam');
-  const btnAbout = document.getElementById('btnMenuAbout');
+  const sections = {
+    single: 'dropZoneSingle', folder: 'dropZoneFolder', eval: 'evalSection', about: 'aboutSection', team: 'teamSection'
+  };
+  const buttons = {
+    single: 'btnMenuSingle', folder: 'btnMenuFolder', eval: 'btnMenuEval', about: 'btnMenuAbout', team: 'btnMenuTeam'
+  };
 
-  const dropSingle = document.getElementById('dropZoneSingle');
-  const dropFolder = document.getElementById('dropZoneFolder');
-  const teamSection = document.getElementById('teamSection');
-  const aboutSection = document.getElementById('aboutSection');
-  const batchSection = document.getElementById('batchSection');
-  const resultsGrid = document.getElementById('resultsGrid');
-  
-  [btnSingle, btnFolder, btnTeam, btnAbout].forEach(b => {
-    if (b) b.classList.remove('active');
+  Object.entries(sections).forEach(([m, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = m === mode ? 'block' : 'none';
+  });
+  Object.entries(buttons).forEach(([m, id]) => {
+    document.getElementById(id)?.classList.toggle('active', m === mode);
   });
 
-  if (dropSingle) dropSingle.style.display = 'none';
-  if (dropFolder) dropFolder.style.display = 'none';
-  if (teamSection) teamSection.style.display = 'none';
-  if (aboutSection) aboutSection.style.display = 'none';
-  if (batchSection) batchSection.style.display = 'none';
-
-  if (mode === 'single') {
-    if (btnSingle) btnSingle.classList.add('active');
-    if (dropSingle) dropSingle.style.display = 'block';
-    if (currentResultData && resultsGrid) resultsGrid.style.display = 'grid';
-  } else if (mode === 'folder') {
-    if (btnFolder) btnFolder.classList.add('active');
-    if (dropFolder) dropFolder.style.display = 'block';
-    if (currentBatchData && batchSection) batchSection.style.display = 'block';
-    if (resultsGrid) resultsGrid.style.display = 'none';
-  } else if (mode === 'team') {
-    if (btnTeam) btnTeam.classList.add('active');
-    if (teamSection) teamSection.style.display = 'block';
-    if (resultsGrid) resultsGrid.style.display = 'none';
-  } else if (mode === 'about') {
-    if (btnAbout) btnAbout.classList.add('active');
-    if (aboutSection) aboutSection.style.display = 'block';
-    if (resultsGrid) resultsGrid.style.display = 'none';
-  }
+  const resultsGrid = document.getElementById('resultsGrid');
+  if (resultsGrid) resultsGrid.style.display = mode === 'single' && currentResultData ? 'grid' : 'none';
+  const batchSection = document.getElementById('batchSection');
+  if (batchSection) batchSection.style.display = mode === 'folder' && currentBatchData ? 'block' : 'none';
 
   updateBreadcrumbText();
 }
@@ -614,89 +383,68 @@ function switchMode(mode) {
 function setupDragAndDrop() {
   const setupZone = (dropZone, isFolder) => {
     if (!dropZone) return;
-    ['dragenter', 'dragover'].forEach(eventName => {
-      dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.add('drag-over');
-      }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropZone.classList.remove('drag-over');
-      }, false);
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-      const dt = e.dataTransfer;
-      const files = dt.files;
-      if (files.length > 0) {
-        if (isFolder || files.length > 1) {
-          switchMode('folder');
-          processFolderFiles(files);
-        } else {
-          switchMode('single');
-          processSingleFile(files[0]);
-        }
+    ['dragenter', 'dragover'].forEach(name => dropZone.addEventListener(name, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('drag-over');
+    }));
+    ['dragleave', 'drop'].forEach(name => dropZone.addEventListener(name, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('drag-over');
+    }));
+    dropZone.addEventListener('drop', e => {
+      const files = e.dataTransfer.files;
+      if (!files.length) return;
+      if (isFolder || files.length > 1) {
+        switchMode('folder');
+        processFolderFiles(files);
+      } else {
+        switchMode('single');
+        processSingleFile(files[0]);
       }
     });
   };
-
   setupZone(document.getElementById('dropZoneSingle'), false);
   setupZone(document.getElementById('dropZoneFolder'), true);
 }
 
 function handleSingleFileSelect(event) {
   const files = event.target.files;
-  if (files && files.length > 0) {
-    processSingleFile(files[0]);
-  }
+  if (files && files.length) processSingleFile(files[0]);
 }
 
 function handleFolderSelect(event) {
   const files = event.target.files;
-  if (files && files.length > 0) {
-    processFolderFiles(files);
-  }
+  if (files && files.length) processFolderFiles(files);
 }
 
 async function processSingleFile(file) {
   if (!file.type.startsWith('image/')) {
-    alert(currentLang === 'hi' ? 'कृपया एक वैध छवि फ़ाइल (JPEG, PNG, WebP) चुनें।' : 'Please select a valid image file (JPEG, PNG, WebP).');
+    alert(t('invalidFile'));
     return;
   }
-
-  const captionInput = document.getElementById('captionInput');
-  const captionText = captionInput ? captionInput.value : '';
-  await uploadSingleFile(file, captionText);
+  await uploadSingleFile(file);
 }
 
 async function processFolderFiles(fileList) {
   const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
-  if (files.length === 0) {
-    alert(currentLang === 'hi' ? 'चयनित निर्देशिका में कोई वैध छवि फ़ाइलें नहीं मिलीं।' : 'No valid image files found in selected directory.');
+  if (!files.length) {
+    alert(t('noImages'));
     return;
   }
-
   await uploadBatchFiles(files);
 }
-
-let isProcessing = false;
 
 function setProcessing(cardId, active, title, sub) {
   const zone = document.querySelector(`#${cardId} .gov-dropzone`);
   if (!zone) return;
-
   let overlay = zone.querySelector('.processing-overlay');
   if (!active) {
-    if (overlay) overlay.remove();
+    overlay?.remove();
     zone.removeAttribute('aria-busy');
     return;
   }
-
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.className = 'processing-overlay';
@@ -714,42 +462,33 @@ function setProcessing(cardId, active, title, sub) {
   zone.setAttribute('aria-busy', 'true');
 }
 
-async function uploadSingleFile(file, caption) {
+async function readError(resp) {
+  try {
+    const body = await resp.json();
+    return body.detail || `HTTP ${resp.status}`;
+  } catch {
+    return `HTTP ${resp.status}`;
+  }
+}
+
+async function uploadSingleFile(file) {
   if (isProcessing) return;
   isProcessing = true;
-  setProcessing(
-    'dropZoneSingle', true,
-    currentLang === 'hi' ? 'छवि का विश्लेषण किया जा रहा है…' : 'Analysing image…',
-    currentLang === 'hi' ? 'फॉरेंसिक मॉडल चल रहे हैं, कृपया प्रतीक्षा करें।' : `Running forensic models on ${file.name}. Please wait.`
-  );
+  setProcessing('dropZoneSingle', true, t('analysing'), t('analysingSub', file.name));
 
   const formData = new FormData();
   formData.append('file', file);
-  if (caption) {
-    formData.append('caption', caption);
-  }
 
   try {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const baseImg = document.getElementById('baseImage');
-      if (baseImg) baseImg.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-
-    const resp = await fetch('/api/predict', {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (!resp.ok) throw new Error('Prediction API failed');
-
+    const resp = await fetch('/api/predict', { method: 'POST', body: formData });
+    if (!resp.ok) throw new Error(await readError(resp));
     const data = await resp.json();
+    setBaseImage(file);
     currentResultData = data;
     renderSingleResult(data);
   } catch (err) {
-    console.error('Error analyzing image:', err);
-    alert('Error connecting to SignalScope backend service: ' + err.message);
+    console.error('Error analysing image:', err);
+    alert(t('apiError') + err.message);
   } finally {
     isProcessing = false;
     setProcessing('dropZoneSingle', false);
@@ -761,41 +500,20 @@ async function uploadSingleFile(file, caption) {
 async function uploadBatchFiles(files) {
   if (isProcessing) return;
   isProcessing = true;
-  setProcessing(
-    'dropZoneFolder', true,
-    currentLang === 'hi' ? `${files.length} छवियों का विश्लेषण किया जा रहा है…` : `Analysing ${files.length} images…`,
-    currentLang === 'hi' ? 'बड़े फ़ोल्डर में कुछ समय लग सकता है।' : 'Large folders can take a while. Please wait.'
-  );
+  setProcessing('dropZoneFolder', true, t('analysingBatch', files.length), t('analysingBatchSub'));
 
   const formData = new FormData();
   files.forEach(f => formData.append('files', f));
 
   try {
-    const resp = await fetch('/api/predict-batch', {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!resp.ok) throw new Error('Batch API failed');
-
-    const batchData = await resp.json();
-    currentBatchData = batchData;
-    renderBatchResult(batchData);
-
-    if (batchData.results && batchData.results.length > 0) {
-      currentResultData = batchData.results[0];
-      const firstFile = files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const baseImg = document.getElementById('baseImage');
-        if (baseImg) baseImg.src = e.target.result;
-      };
-      reader.readAsDataURL(firstFile);
-      renderSingleResult(currentResultData);
-    }
+    const resp = await fetch('/api/predict-batch', { method: 'POST', body: formData });
+    if (!resp.ok) throw new Error(await readError(resp));
+    currentBatchFiles = files;
+    currentBatchData = await resp.json();
+    renderBatchResult(currentBatchData);
   } catch (err) {
     console.error('Error processing batch:', err);
-    alert('Error processing batch upload: ' + err.message);
+    alert(t('apiError') + err.message);
   } finally {
     isProcessing = false;
     setProcessing('dropZoneFolder', false);
@@ -804,148 +522,203 @@ async function uploadBatchFiles(files) {
   }
 }
 
+function setBaseImage(file) {
+  const baseImg = document.getElementById('baseImage');
+  if (!baseImg || !file) return;
+  if (baseImg.dataset.objectUrl) URL.revokeObjectURL(baseImg.dataset.objectUrl);
+  baseImg.dataset.objectUrl = URL.createObjectURL(file);
+  baseImg.src = baseImg.dataset.objectUrl;
+}
+
+function levelLabel(verdict) {
+  return String(verdict.detection_level || '').startsWith('Level 1') ? t('level1') : t('level2');
+}
+
 function renderSingleResult(data) {
   const resultsGrid = document.getElementById('resultsGrid');
   if (resultsGrid) resultsGrid.style.display = 'grid';
 
-  const verdict = data.verdict;
-  const modules = data.modules;
+  const verdict = data.verdict || {};
+  const modules = data.modules || {};
+  const isAi = Boolean(verdict.is_ai_generated);
 
+  setText('verdictLabel', isAi ? t('verdictAi') : t('verdictReal'));
+  setText('verdictScore', pct(verdict.confidence_score));
+  setText('verdictSubtitle', `${t('scoreSub')} · ${levelLabel(verdict)}`);
+  setText('resultFilename', data.filename || '');
+  setText('resultTiming', typeof data.processing_time_ms === 'number' ? `${(data.processing_time_ms / 1000).toFixed(1)} s` : '');
+  setText('imageResolution', data.resolution || '');
   const banner = document.getElementById('verdictBanner');
-  const label = document.getElementById('verdictLabel');
-  const score = document.getElementById('verdictScore');
+  if (banner) banner.className = `verdict-banner-gov ${isAi ? 'ai' : 'real'}`;
 
-  if (label) {
-    if (currentLang === 'hi') {
-      label.innerText = verdict.is_ai_generated ? "संभावित नकली (एआई)" : "संभावित वास्तविक";
-    } else {
-      label.innerText = verdict.is_ai_generated ? "LIKELY FAKE" : "LIKELY REAL";
-    }
-  }
+  renderExplanation(modules.module_a_explanation || modules.module_a_explainability || {});
+  renderEnsemble(verdict);
+  renderRobustness(modules.module_c_robustness);
+  renderMetadata(modules.module_d_metadata || {}, modules.module_b_attribution || {});
+}
 
-  if (score) score.innerText = `${(verdict.confidence_score * 100).toFixed(1)}%`;
-  safeSetText('imageResolution', data.resolution);
-
-  if (banner) {
-    banner.className = verdict.is_ai_generated ? 'verdict-banner-gov ai' : 'verdict-banner-gov real';
-  }
-
-  const modA = modules.module_a_explainability;
+function renderExplanation(modA) {
   const heatmapImg = document.getElementById('heatmapImage');
-  if (heatmapImg) heatmapImg.src = modA.heatmap_base64;
-  safeSetText('explanationSummary', modA.summary_text);
+  if (heatmapImg) {
+    heatmapImg.src = modA.heatmap_base64 || '';
+    heatmapImg.hidden = !modA.heatmap_base64;
+  }
+  setText('saliencyNote', modA.localization_quality || '');
+  setText('explanationSummary', modA.summary_text || '');
 
-  const cuesContainer = document.getElementById('visualCuesContainer');
-  if (cuesContainer) {
-    cuesContainer.innerHTML = modA.cues.map(c => `
+  const cues = document.getElementById('visualCuesContainer');
+  if (cues) {
+    cues.innerHTML = (modA.cues || []).map(c => `
       <div class="cue-item-gov">
         <div class="cue-header-gov">
-          <span>${c.type}</span>
-          <span style="color: var(--gov-navy); font-family: var(--font-mono);">${currentLang === 'hi' ? 'विश्वास' : 'Confidence'}: ${Math.round(c.confidence * 100)}%</span>
+          <span>${esc(c.type)}</span>
+          <span class="cue-value">${esc(c.value)}</span>
         </div>
-        <div class="cue-desc-gov">${c.detail}</div>
+        <div class="cue-desc-gov">${esc(c.detail)}</div>
       </div>
     `).join('');
   }
+}
 
-  const modB = modules.module_b_attribution;
-  safeSetText('attrFamily', modB.family);
-  safeSetText('attrModel', modB.specific_model);
-  
-  const famContainer = document.getElementById('familyProbContainer');
-  if (famContainer) {
-    famContainer.innerHTML = Object.entries(modB.family_probabilities).map(([fam, prob]) => `
+function renderEnsemble(verdict) {
+  const box = document.getElementById('ensembleContainer');
+  if (!box) return;
+
+  if (String(verdict.detection_level || '').startsWith('Level 1')) {
+    box.innerHTML = `<p class="note-muted">${esc(t('level1Note', verdict.matched_generator || '-'))}</p>`;
+    return;
+  }
+
+  const ens = verdict.ensemble_breakdown;
+  if (!ens || !Array.isArray(ens.family_models)) {
+    box.innerHTML = `<p class="note-muted">${esc(t('noEnsemble'))}</p>`;
+    return;
+  }
+
+  const stacking = ens.stacking || {};
+  const contributions = stacking.member_logit_contributions || {};
+  const rows = ens.family_models.map(m => {
+    const c = contributions[m.model_id];
+    const share = typeof c === 'number' ? `<span class="contrib ${c > 0 ? 'toward-ai' : 'toward-real'}">${c > 0 ? '+' : ''}${c.toFixed(2)} ${esc(t('contrib'))}</span>` : '';
+    return `
       <div class="metric-row-gov">
-        <span class="metric-label-gov">${fam}</span>
-        <span class="metric-val-gov">${(prob * 100).toFixed(1)}%</span>
-      </div>
-    `).join('');
+        <span class="metric-label-gov">${esc(m.family)}<br><span class="member-sub">${esc(m.model_name)}</span></span>
+        <span class="metric-val-gov">P(AI) ${pct(m.ai_probability)} ${share}</span>
+      </div>`;
+  }).join('');
+
+  let fused = '';
+  if (typeof stacking.stacked_ai_probability === 'number') {
+    fused = `
+      <div class="metric-row-gov metric-row-strong">
+        <span class="metric-label-gov">${esc(t('stackedP'))}</span>
+        <span class="metric-val-gov">${pct(stacking.stacked_ai_probability)} (${esc(t('threshold'))} ${Number(stacking.decision_threshold ?? 0.5).toFixed(2)})</span>
+      </div>`;
+  } else if (typeof ens.ai_votes === 'number') {
+    fused = `
+      <div class="metric-row-gov metric-row-strong">
+        <span class="metric-label-gov">${esc(t('fusion'))}</span>
+        <span class="metric-val-gov">${esc(t('votes', ens.ai_votes, ens.num_families_evaluated))}</span>
+      </div>`;
   }
 
-  const modC = modules.module_c_robustness;
-  safeSetText('robustnessRating', modC.overall_stability_rating);
-  safeSetText('robustnessJpeg', modC.verdict_preserved_under_jpeg70 ? (currentLang === 'hi' ? "स्थिर" : "Stable") : (currentLang === 'hi' ? "क्षीण" : "Degraded"));
+  const op = typeof verdict.operating_point_accuracy === 'number' && typeof verdict.operating_point_fpr === 'number'
+    ? `<p class="note-muted">${esc(t('opPoint', pct(verdict.operating_point_accuracy, 2), pct(verdict.operating_point_fpr, 2)))}</p>`
+    : '';
 
-  const jpegContainer = document.getElementById('jpegCurveContainer');
-  if (jpegContainer) {
-    jpegContainer.innerHTML = modC.jpeg_degradation_curve.map(row => `
-      <div class="metric-row-gov">
-        <span class="metric-label-gov">${currentLang === 'hi' ? 'गुणवत्ता' : 'Quality'} ${row.quality}</span>
-        <span class="metric-val-gov">${(row.confidence_retained * 100).toFixed(1)}%</span>
-      </div>
-    `).join('');
+  box.innerHTML = rows + fused + op;
+}
+
+function stablePill(ok) {
+  if (ok === null || ok === undefined) return esc(t('na'));
+  return `<span class="pill-gov ${ok ? 'pill-gov-real' : 'pill-gov-ai'}">${esc(ok ? t('stable') : t('changed'))}</span>`;
+}
+
+function curveRows(rows, labelFn) {
+  return rows.map(r => `
+    <div class="metric-row-gov">
+      <span class="metric-label-gov">${esc(labelFn(r))}</span>
+      <span class="metric-val-gov">${pct(r.ai_score)} ${stablePill(r.verdict_stable)}</span>
+    </div>
+  `).join('');
+}
+
+function renderRobustness(modC) {
+  const jpeg = document.getElementById('jpegCurveContainer');
+  const resize = document.getElementById('resizeCurveContainer');
+
+  if (!modC || modC.status !== 'measured') {
+    setText('robustnessPixel', t('na'));
+    setText('robustnessRating', modC?.overall_stability_rating || t('robustUnavailable'));
+    document.getElementById('robustnessJpeg').innerHTML = esc(t('na'));
+    document.getElementById('robustnessResize').innerHTML = esc(t('na'));
+    if (jpeg) jpeg.innerHTML = '';
+    if (resize) resize.innerHTML = '';
+    setText('robustnessMethod', '');
+    return;
   }
 
-  const modD = modules.module_d_metadata;
-  safeSetText('metaHasExif', modD.has_exif ? (currentLang === 'hi' ? "उपलब्ध" : "Present") : (currentLang === 'hi' ? "हटाया गया" : "Stripped"));
-  safeSetText('metaHasC2pa', modD.has_c2pa ? (currentLang === 'hi' ? "हस्ताक्षरित" : "Signed") : (currentLang === 'hi' ? "अहस्ताक्षरित" : "Unsigned"));
-  safeSetText('metaCamera', modD.camera_model ? `${modD.camera_make} ${modD.camera_model}` : (currentLang === 'hi' ? "अज्ञात / लागू नहीं" : "Unknown / N/A"));
-  safeSetText('metaAssessment', modD.assessment);
-
-  const modE = modules.module_e_multimodal;
-  safeSetText('multiCaption', modE.caption_text || (currentLang === 'hi' ? "कोई नहीं दिया गया" : "None provided"));
-  safeSetText('multiScore', modE.semantic_similarity ? `${(modE.semantic_similarity * 100).toFixed(1)}%` : "N/A");
-  safeSetText('multiAssessment', modE.assessment || (currentLang === 'hi' ? "छोड़ा गया" : "Skipped"));
-
-  const modG = modules.module_g_active_defense;
-  const defenseContainer = document.getElementById('activeDefenseContainer');
-  if (defenseContainer) {
-    defenseContainer.innerHTML = modG.defense_evaluations.map(ev => `
-      <div class="cue-item-gov">
-        <div class="cue-header-gov">
-          <span>${ev.attack_type}</span>
-          <span style="color: var(--gov-navy); font-family: var(--font-mono);">${currentLang === 'hi' ? 'संरक्षित स्कोर' : 'Retained'}: ${ev.accuracy_retained}</span>
-        </div>
-        <div class="cue-desc-gov"><strong>${currentLang === 'hi' ? 'निवारण' : 'Mitigation'}:</strong> ${ev.mitigation}</div>
-      </div>
-    `).join('');
+  // On metadata (Level 1) verdicts this is the pixel ensemble's own call and can differ from the headline verdict.
+  const pixelAi = modC.pixel_detector_clean_score >= 0.5;
+  setText('robustnessPixel', `${pixelAi ? t('verdictAi') : t('verdictReal')} · ${pct(modC.pixel_detector_clean_score)}`);
+  setText('robustnessRating', modC.overall_stability_rating);
+  document.getElementById('robustnessJpeg').innerHTML = stablePill(modC.verdict_preserved_under_jpeg70);
+  document.getElementById('robustnessResize').innerHTML = stablePill(modC.verdict_preserved_under_resize50);
+  if (jpeg) {
+    jpeg.innerHTML = curveRows(modC.jpeg_degradation_curve || [],
+      r => (r.quality === 'Original' ? t('original') : `${t('quality')}${r.quality}`));
   }
+  if (resize) {
+    resize.innerHTML = curveRows(modC.resize_degradation_curve || [],
+      r => String(r.resolution).replace(/^Original/, t('original')));
+  }
+  setText('robustnessMethod', modC.method || '');
+}
+
+function renderMetadata(modD, modB) {
+  setText('metaHasExif', modD.has_exif ? t('present') : t('absent'));
+  setText('metaHasC2pa', modD.has_c2pa ? t('signed') : t('unsigned'));
+  setText('metaCamera', modD.camera_model ? `${modD.camera_make || ''} ${modD.camera_model}`.trim() : t('unknown'));
+  setText('metaGenerator', modB.status === 'metadata_only' ? modB.family : t('notDeclared'));
+  setText('metaAssessment', modD.assessment || t('na'));
 }
 
 function renderBatchResult(batchData) {
   const batchSection = document.getElementById('batchSection');
   if (batchSection) batchSection.style.display = 'block';
 
-  const t = translations[currentLang];
-  const summary = batchData.summary;
-  
-  safeSetText('statTotalImages', batchData.total_images);
-  safeSetText('statAiCount', summary.likely_ai_generated_count);
-  safeSetText('statRealCount', summary.likely_real_count);
-  safeSetText('statLatency', `${batchData.total_time_seconds}s`);
+  const summary = batchData.summary || {};
+  setText('statTotalImages', batchData.total_images ?? 0);
+  setText('statAiCount', summary.likely_ai_generated_count ?? 0);
+  setText('statRealCount', summary.likely_real_count ?? 0);
+  setText('statLatency', `${batchData.total_time_seconds ?? 0}s`);
 
   const tbody = document.getElementById('batchTableBody');
-  if (tbody) {
-    tbody.innerHTML = batchData.results.map((item, idx) => {
-      const isAi = item.verdict.is_ai_generated;
-      const verdictLabel = currentLang === 'hi' ? (isAi ? 'संभावित नकली' : 'संभावित वास्तविक') : (isAi ? 'LIKELY FAKE' : 'LIKELY REAL');
-      return `
-        <tr>
-          <td>${item.filename}</td>
-          <td><span class="${isAi ? 'pill-gov pill-gov-ai' : 'pill-gov pill-gov-real'}">${verdictLabel}</span></td>
-          <td>${(item.verdict.confidence_score * 100).toFixed(1)}%</td>
-          <td>${item.modules.module_b_attribution.specific_model}</td>
-          <td>
-            <button class="btn-gov-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="viewBatchDetail(${idx})">
-              ${t.btnInspect}
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  }
+  if (!tbody) return;
+  tbody.innerHTML = (batchData.results || []).map((item, idx) => {
+    const v = item.verdict || {};
+    const isAi = Boolean(v.is_ai_generated);
+    return `
+      <tr>
+        <td>${esc(item.filename)}</td>
+        <td><span class="pill-gov ${isAi ? 'pill-gov-ai' : 'pill-gov-real'}">${esc(isAi ? t('verdictAi') : t('verdictReal'))}</span></td>
+        <td class="num">${pct(v.confidence_score)}</td>
+        <td>${esc(levelLabel(v))}</td>
+        <td>
+          <button class="btn-gov-secondary btn-small" onclick="viewBatchDetail(${idx})">${esc(t('inspect'))}</button>
+        </td>
+      </tr>`;
+  }).join('');
 }
 
 function viewBatchDetail(index) {
-  if (currentBatchData && currentBatchData.results[index]) {
-    currentResultData = currentBatchData.results[index];
-    switchMode('single');
-    renderSingleResult(currentResultData);
-    const resultsGrid = document.getElementById('resultsGrid');
-    if (resultsGrid) {
-      window.scrollTo({ top: resultsGrid.offsetTop - 90, behavior: 'smooth' });
-    }
-  }
+  if (!currentBatchData || !currentBatchData.results[index]) return;
+  currentResultData = currentBatchData.results[index];
+  setBaseImage(currentBatchFiles[index]);
+  switchMode('single');
+  renderSingleResult(currentResultData);
+  const resultsGrid = document.getElementById('resultsGrid');
+  if (resultsGrid) window.scrollTo({ top: resultsGrid.offsetTop - 90, behavior: 'smooth' });
 }
 
 function updateHeatmapOpacity(val) {
@@ -956,8 +729,6 @@ function updateHeatmapOpacity(val) {
 function switchTab(tabId, btnElement) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.tab-btn-gov').forEach(el => el.classList.remove('active'));
-
-  const targetTab = document.getElementById(tabId);
-  if (targetTab) targetTab.classList.add('active');
-  if (btnElement) btnElement.classList.add('active');
+  document.getElementById(tabId)?.classList.add('active');
+  btnElement?.classList.add('active');
 }

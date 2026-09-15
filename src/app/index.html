@@ -3,70 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TAKNIKI VIBHAG - Media Authenticity & Misinformation Prevention Suite | SIH 2026</title>
+  <title>SignalScope - Real vs AI-Generated Image Detector | SIH 2026</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/eval.css">
 </head>
 <body>
 
-  <!-- 1. Dual-Language Advisory Modal Pop-up -->
+  <!-- 1. Welcome modal -->
   <div class="gov-modal-overlay" id="advisoryModal">
     <div class="gov-modal-box">
       <div class="gov-modal-header">
         <div class="gov-modal-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-          <span id="txtModalTitle">IMPORTANT PUBLIC ADVISORY / मुख्य सार्वजनिक परामर्श</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span data-i18n="modalTitle">About SignalScope</span>
         </div>
         <button class="gov-modal-close" onclick="closeModal()" title="Close">&times;</button>
       </div>
       <div class="gov-modal-body">
-        <!-- English Advisory Block -->
         <div class="lang-block-en">
-          <p style="font-weight: 800; color: var(--gov-navy); margin-bottom: 0.35rem;" id="txtModalTitleEng">
-            SIH 2026 Media Authenticity & Misinformation Prevention Portal
-          </p>
-          <p style="color: var(--text-medium); font-size: 0.85rem;" id="txtModalDescEng">
-            Welcome to SignalScope by Team Takniki Vibhag. This platform analyzes submitted imagery using neural forensic classification and Grad-CAM visual anomaly localization to evaluate synthetic media likelihood under SIH 2026 Problem Statement C-433.
-          </p>
-        </div>
-        <!-- Hindi Advisory Block -->
-        <div class="lang-block-hi">
-          <p style="font-weight: 800; color: #78350F; margin-bottom: 0.35rem;" id="txtModalTitleHin">
-            एसआईएच 2026 मीडिया प्रामाणिकता एवं भ्रामक सूचना रोकथाम पोर्टल
-          </p>
-          <p style="color: #92400E; font-size: 0.85rem;" id="txtModalDescHin">
-            टीम तकनीकी विभाग के सिग्नलस्कोप पोर्टल में आपका स्वागत है। यह मंच एसआईएच 2026 समस्या कथन C-433 के तहत सिंथेटिक मीडिया और डीपफेक छवियों की संभावना का मूल्यांकन करने के लिए फॉरेंसिक विश्लेषण प्रदान करता है।
-          </p>
+          <p class="modal-head" data-i18n="modalHead">Real vs AI-Generated Image Detection</p>
+          <p class="modal-desc" data-i18n="modalDesc">SignalScope estimates how likely an image is to be AI-generated, shows the signals behind that estimate, and checks the file's provenance metadata. It covers scenes, objects, art and product images.</p>
+          <p class="modal-desc" data-i18n="modalNote">Every result is a likelihood assessment, never proof or an accusation. The tool does not identify or make claims about real people.</p>
         </div>
       </div>
       <div class="gov-modal-footer">
-        <button class="btn-gov-primary" onclick="closeModal()" id="txtBtnModalClose">PROCEED TO PORTAL / पोर्टल पर आगे बढ़ें</button>
+        <button class="btn-gov-primary" onclick="closeModal()"><span data-i18n="modalBtn">Continue</span></button>
       </div>
     </div>
   </div>
 
-  <!-- 2. National Tricolor Strip -->
+  <!-- 2. Tricolor strip -->
   <div class="gov-tricolor-strip"></div>
 
-  <!-- 3. Top Accessibility & Language Utility Bar -->
+  <!-- 3. Utility bar -->
   <div class="gov-top-utility">
     <div class="utility-inner">
       <div>
-        <a href="#mainContent" class="skip-link" id="txtSkipLink">Skip to main content</a>
+        <a href="#mainContent" class="skip-link" data-i18n="skipLink">Skip to main content</a>
         <span style="opacity: 0.5; margin: 0 8px;">|</span>
-        <span id="txtGovSubTitleTop">SignalScope Media Forensics & Authenticity Engine</span>
+        <span data-i18n="utilTitle">SIH 2026 Internal Hackathon · Problem Statement 2 (C-433)</span>
       </div>
       <div class="utility-tools">
         <div class="access-group">
-          <span style="font-weight: 600; margin-right: 4px;" id="txtTextSizeLabel">Text Size:</span>
+          <span style="font-weight: 600; margin-right: 4px;" data-i18n="textSize">Text Size:</span>
           <button class="access-btn" onclick="adjustFontSize(-1)" title="Decrease Text Size">A-</button>
           <button class="access-btn" onclick="adjustFontSize(0)" title="Reset Text Size">A</button>
           <button class="access-btn" onclick="adjustFontSize(1)" title="Increase Text Size">A+</button>
         </div>
         <div class="access-group">
-          <button class="access-btn" onclick="toggleContrast()" id="btnContrast">High Contrast</button>
+          <button class="access-btn" onclick="toggleContrast()"><span data-i18n="btnContrast">High Contrast</span></button>
         </div>
         <div class="lang-toggle-box">
           <button class="lang-toggle-btn active" id="btnLangEN" onclick="setLanguage('en')">English</button>
@@ -76,519 +64,611 @@
     </div>
   </div>
 
-  <!-- 3. Header Section -->
+  <!-- 4. Header -->
   <header class="gov-header">
     <div class="header-inner">
       <div class="emblem-box">
         <div class="emblem-text">
-          <span class="govt-title" id="txtGovtOfIndia">SIGNALSCOPE FORENSIC ENGINE</span>
-          <h1 class="portal-title" id="txtMainPortalTitle">SIGNAL SCOPE</h1>
-          <span class="directorate-title" id="txtDirectorate">Media Verification & Authenticity Platform</span>
+          <span class="govt-title" data-i18n="hdrKicker">TEAM TAKNEEKI VIBHAG</span>
+          <h1 class="portal-title" data-i18n="hdrTitle">SIGNAL SCOPE</h1>
+          <span class="directorate-title" data-i18n="hdrSub">Telling Real From Synthetic in the Age of Generative Media</span>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- 5. Navigation Menu Bar -->
+  <!-- 5. Navigation -->
   <nav class="gov-nav-menu">
     <div class="menu-inner">
       <button class="menu-item active" id="btnMenuSingle" onclick="switchMode('single')">
-        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-        <span id="txtMenuSingle">Single Image Submission Desk</span>
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        <span data-i18n="navSingle">Analyse an Image</span>
       </button>
       <button class="menu-item" id="btnMenuFolder" onclick="switchMode('folder')">
         <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-        <span id="txtMenuFolder">Directory Batch Audit Desk</span>
+        <span data-i18n="navBatch">Batch Folder Scan</span>
       </button>
-      <button class="menu-item" id="btnMenuTeam" onclick="switchMode('team')">
-        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 1-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        <span id="txtMenuTeam">Team Directorate Members (6)</span>
+      <button class="menu-item" id="btnMenuEval" onclick="switchMode('eval')">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+        <span data-i18n="navEval">Evaluation &amp; Metrics</span>
       </button>
       <button class="menu-item" id="btnMenuAbout" onclick="switchMode('about')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-        <span id="txtMenuDirectives">Technical Methodology</span>
+        <span data-i18n="navMethod">Methodology</span>
+      </button>
+      <button class="menu-item" id="btnMenuTeam" onclick="switchMode('team')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 1-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span data-i18n="navTeam">Team (6)</span>
       </button>
     </div>
   </nav>
 
-  <!-- 6. Public Announcement Ticker Bar -->
+  <!-- 6. Ticker -->
   <div class="gov-ticker">
     <div class="ticker-inner">
-      <span class="ticker-label" id="txtTickerLabel">PUBLIC INTEREST</span>
-      <span id="txtTickerText">Independent media analysis desk created to counter AI-generated synthetic media, deepfakes, and fake news. Evaluation standard: Calibrated Likelihood Assessment.</span>
+      <span class="ticker-label" data-i18n="tickerLabel">HOW TO READ RESULTS</span>
+      <span data-i18n="tickerText">Scores are calibrated likelihoods ("likely AI-generated" / "likely real"), not proof. CIFAKE test split: ROC-AUC 0.9976, accuracy 97.8%, false-positive rate 2.35%.</span>
     </div>
   </div>
 
-  <!-- 7. Main Portal Container -->
+  <!-- 7. Main -->
   <main class="gov-container" id="mainContent">
-    
-    <!-- UIDAI / IRCTC Quick Service Tiles Grid -->
+
     <div class="service-tiles-section">
       <div class="section-label-bar">
-        <span class="section-heading-txt" id="txtServiceGridTitle">Forensic Verification Desks & Services</span>
+        <span class="section-heading-txt" data-i18n="tilesTitle">What SignalScope Does</span>
       </div>
       <div class="service-grid">
         <div class="tile-card" onclick="switchMode('single')">
-          <div class="tile-title" id="txtTile1Title">Single Artifact Inspection</div>
-          <div class="tile-desc" id="txtTile1Desc">Neural classification & visual Grad-CAM heatmap localization desk.</div>
+          <div class="tile-title" data-i18n="tile1T">Single Image Analysis</div>
+          <div class="tile-desc" data-i18n="tile1D">Stacked 3-model ensemble verdict, attention overlay, measured explanation cues.</div>
         </div>
         <div class="tile-card" onclick="switchMode('folder')">
-          <div class="tile-title" id="txtTile2Title">Directory Batch Audit</div>
-          <div class="tile-desc" id="txtTile2Desc">High-throughput bulk image scanning for departmental compliance.</div>
+          <div class="tile-title" data-i18n="tile2T">Batch Folder Scan</div>
+          <div class="tile-desc" data-i18n="tile2D">Scan a whole folder of images and inspect any result in detail.</div>
         </div>
-        <div class="tile-card" onclick="switchMode('single')">
-          <div class="tile-title" id="txtTile3Title">Architecture Attribution</div>
-          <div class="tile-desc" id="txtTile3Desc">Identify Diffusion, GAN, or Transformer generator origins (Module B).</div>
+        <div class="tile-card" onclick="switchMode('eval')">
+          <div class="tile-title" data-i18n="tile3T">Evaluation &amp; Metrics</div>
+          <div class="tile-desc" data-i18n="tile3D">ROC-AUC, macro-F1, confusion matrix and operating point on 20,000 CIFAKE test images.</div>
         </div>
-        <div class="tile-card" onclick="switchMode('single')">
-          <div class="tile-title" id="txtTile4Title">Multimodal Claim Check</div>
-          <div class="tile-desc" id="txtTile4Desc">CLIP semantic alignment for checking image-caption claim consistency (Module E).</div>
+        <div class="tile-card" onclick="switchMode('about')">
+          <div class="tile-title" data-i18n="tile4T">Methodology</div>
+          <div class="tile-desc" data-i18n="tile4D">Architecture, training setup, and the modules included in this submission.</div>
         </div>
       </div>
     </div>
 
     <div class="breadcrumb-bar">
-      <a href="#" id="txtBreadcrumbHome">Home</a> &gt; <span id="txtBreadcrumbCurrent">Single Artifact Submission Desk</span>
+      <a href="#" data-i18n="crumbHome">Home</a> &gt; <span id="txtBreadcrumbCurrent">Analyse an Image</span>
     </div>
 
-    <!-- Mode 1: Single Image Submission Desk -->
+    <!-- Mode: single image -->
     <div class="gov-card" id="dropZoneSingle">
       <div class="gov-card-header">
-        <h2 class="gov-card-title" id="txtCardTitleSingle">
+        <h2 class="gov-card-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-          Single Artifact Submission Desk
+          <span data-i18n="singleTitle">Analyse an Image</span>
         </h2>
-        <span style="font-size: 0.8rem; font-weight: 700; color: var(--gov-navy);" id="txtAckSingle">Ref: SIG-2026-DESK-A</span>
       </div>
       <div class="gov-card-body">
-        
         <div class="gov-dropzone">
           <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="17 8 12 3 7 8"></polyline>
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
-          <h3 class="dropzone-title" id="txtDropTitleSingle">Select or Drag Image File for Forensic Testing</h3>
-          <p class="dropzone-sub" id="txtDropSubSingle">Upload single image artifact (JPEG, PNG, WebP) to perform neural classification, Grad-CAM visual anomaly localization, generator architecture attribution, and metadata provenance evaluation.</p>
-          
+          <h3 class="dropzone-title" data-i18n="dropTitle">Select or drag an image</h3>
+          <p class="dropzone-sub" data-i18n="dropSub">JPEG, PNG or WebP. You get a likelihood verdict, the ensemble breakdown, an attention overlay with measured cues, a degradation re-test, and a provenance metadata check.</p>
           <button class="btn-gov-primary" onclick="document.getElementById('fileInputSingle').click()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-            <span id="txtBtnChooseSingle">Choose Image File</span>
+            <span data-i18n="btnChoose">Choose Image File</span>
           </button>
-          
           <input type="file" id="fileInputSingle" accept="image/*" style="display: none;" onchange="handleSingleFileSelect(event)">
         </div>
-
-        <!-- Caption Field (ONLY VISIBLE ON SINGLE FILE DESK) -->
-        <div class="gov-input-group" id="captionContainer">
-          <label for="captionInput" class="gov-input-label" id="txtCaptionLabel">Multimodal Claim Verification (Module E)</label>
-          <input type="text" id="captionInput" class="gov-input-text" placeholder="Enter associated text caption, claim statement, or news context to verify CLIP semantic match...">
-        </div>
-
       </div>
     </div>
 
-    <!-- Mode 2: Folder Directory Audit Desk (Hidden by Default) -->
+    <!-- Mode: batch folder -->
     <div class="gov-card" id="dropZoneFolder" style="display: none;">
       <div class="gov-card-header">
-        <h2 class="gov-card-title" id="txtCardTitleFolder">
+        <h2 class="gov-card-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-          Directory Batch Audit Desk
+          <span data-i18n="batchTitle">Batch Folder Scan</span>
         </h2>
-        <span style="font-size: 0.8rem; font-weight: 700; color: var(--gov-navy);" id="txtAckFolder">Ref: SIG-2026-AUDIT-B</span>
       </div>
       <div class="gov-card-body">
-        
         <div class="gov-dropzone">
           <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
             <line x1="12" y1="11" x2="12" y2="17"></line>
             <line x1="9" y1="14" x2="15" y2="14"></line>
           </svg>
-          <h3 class="dropzone-title" id="txtDropTitleFolder">Select Directory Folder for High-Throughput Audit</h3>
-          <p class="dropzone-sub" id="txtDropSubFolder">Submit complete image directories for automated high-throughput media verification, batch threat statistics, and departmental compliance reporting.</p>
-          
+          <h3 class="dropzone-title" data-i18n="batchDropTitle">Select a folder of images</h3>
+          <p class="dropzone-sub" data-i18n="batchDropSub">Every image in the folder is scored. You get a summary and a table, and can open any image for the full analysis.</p>
           <button class="btn-gov-primary" onclick="document.getElementById('folderInputDirectory').click()">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-            <span id="txtBtnChooseFolder">Choose Image Directory</span>
+            <span data-i18n="btnChooseDir">Choose Image Folder</span>
           </button>
-          
           <input type="file" id="folderInputDirectory" webkitdirectory directory multiple style="display: none;" onchange="handleFolderSelect(event)">
+        </div>
+      </div>
+    </div>
+
+    <!-- Mode: evaluation & metrics -->
+    <div class="gov-card" id="evalSection" style="display: none;">
+      <div class="gov-card-header">
+        <h2 class="gov-card-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          <span data-i18n="evalTitle">Evaluation &amp; Metrics</span>
+        </h2>
+        <span class="card-tag" data-i18n="evalTag">CIFAKE test split · 20,000 images</span>
+      </div>
+      <div class="gov-card-body eval-body">
+
+        <p class="eval-intro" data-i18n="evalIntro">Primary metric: ROC-AUC. Headline figures are for the deployed stacked ensemble at the default 0.5 threshold, on the full CIFAKE test split (10,000 real, 10,000 AI-generated).</p>
+
+        <div class="eval-stat-grid">
+          <div class="stat-card-gov eval-stat">
+            <div class="stat-label-gov" data-i18n="statAucL">ROC-AUC (primary)</div>
+            <div class="stat-value-gov">0.9976</div>
+          </div>
+          <div class="stat-card-gov eval-stat">
+            <div class="stat-label-gov" data-i18n="statF1L">Macro-F1</div>
+            <div class="stat-value-gov">0.9780</div>
+          </div>
+          <div class="stat-card-gov eval-stat">
+            <div class="stat-label-gov" data-i18n="statAccL">Accuracy @ 0.5</div>
+            <div class="stat-value-gov">97.80%</div>
+          </div>
+          <div class="stat-card-gov eval-stat">
+            <div class="stat-label-gov" data-i18n="statFprL">False-positive rate @ 0.5</div>
+            <div class="stat-value-gov">2.35%</div>
+          </div>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="evalDataT">Dataset &amp; split</h3>
+          <div class="table-scroll">
+            <table class="table-gov">
+              <thead>
+                <tr>
+                  <th data-i18n="thSplit">Split</th>
+                  <th class="num" data-i18n="thImages">Images</th>
+                  <th class="num" data-i18n="thRealFake">Real / AI</th>
+                  <th data-i18n="thUse">Used for</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td data-i18n="splitTrain">Train (90% of CIFAKE train/)</td><td class="num">90,000</td><td class="num">45,000 / 45,000</td><td data-i18n="splitTrainUse">Dual-stream model weights</td></tr>
+                <tr><td data-i18n="splitVal">Validation (10% of CIFAKE train/)</td><td class="num">10,000</td><td class="num">5,000 / 5,000</td><td data-i18n="splitValUse">Best epoch, temperature calibration, stacking meta-learner (4,000-image balanced sample)</td></tr>
+                <tr><td data-i18n="splitTest">Test (CIFAKE test/)</td><td class="num">20,000</td><td class="num">10,000 / 10,000</td><td data-i18n="splitTestUse">All reported metrics</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note-muted" data-i18n="dataSource">Source: CIFAKE (birdy654/cifake-real-and-ai-generated-synthetic-images, Kaggle). Real images from CIFAR-10; AI images generated with Stable Diffusion v1.4; all 32×32.</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="evalCmpT">Every model on the test split</h3>
+          <div class="table-scroll">
+            <table class="table-gov">
+              <thead>
+                <tr>
+                  <th data-i18n="thModel">Model</th>
+                  <th class="num">ROC-AUC</th>
+                  <th class="num" data-i18n="thAcc">Accuracy</th>
+                  <th class="num" data-i18n="thPrec">Precision</th>
+                  <th class="num" data-i18n="thRecall">Recall</th>
+                  <th class="num">F1</th>
+                  <th class="num">FPR</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>ViT-Base (dima806)</td><td class="num">0.4142</td><td class="num">48.33%</td><td class="num">0.3572</td><td class="num">0.0419</td><td class="num">0.0750</td><td class="num">7.54%</td></tr>
+                <tr><td>Swin (Organika sdxl-detector)</td><td class="num">0.6454</td><td class="num">57.43%</td><td class="num">0.6832</td><td class="num">0.2769</td><td class="num">0.3941</td><td class="num">12.84%</td></tr>
+                <tr><td>Dual-stream ResNet34 + FFT (ours)</td><td class="num">0.9976</td><td class="num">97.74%</td><td class="num">0.9739</td><td class="num">0.9811</td><td class="num">0.9775</td><td class="num">2.63%</td></tr>
+                <tr><td data-i18n="rowMajority">Majority vote (3 members)</td><td class="num">0.9101</td><td class="num">63.82%</td><td class="num">0.9352</td><td class="num">0.2971</td><td class="num">0.4509</td><td class="num">2.06%</td></tr>
+                <tr class="row-highlight"><td data-i18n="rowStacked">Stacked ensemble @ 0.5 (deployed)</td><td class="num">0.9976</td><td class="num">97.80%</td><td class="num">0.9766</td><td class="num">0.9795</td><td class="num">0.9780</td><td class="num">2.35%</td></tr>
+                <tr><td data-i18n="rowStackedLow">Stacked ensemble @ 0.165 (5% validation-FPR point)</td><td class="num">0.9976</td><td class="num">96.74%</td><td class="num">0.9456</td><td class="num">0.9919</td><td class="num">0.9682</td><td class="num">5.71%</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note-muted" data-i18n="evalCmpNote">Positive class = AI-generated. FPR = share of real images wrongly flagged as AI.</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="evalCmT">Confusion matrices (test split)</h3>
+          <div class="cm-pair">
+            <div>
+              <div class="cm-caption" data-i18n="cmStacked">Stacked ensemble @ 0.5 · macro-F1 0.9780</div>
+              <div class="cm-grid">
+                <div></div>
+                <div class="cm-head" data-i18n="cmPredReal">Predicted real</div>
+                <div class="cm-head" data-i18n="cmPredAi">Predicted AI</div>
+                <div class="cm-head cm-side" data-i18n="cmActReal">Actual real</div>
+                <div class="cm-cell cm-good">9,765</div>
+                <div class="cm-cell cm-bad">235</div>
+                <div class="cm-head cm-side" data-i18n="cmActAi">Actual AI</div>
+                <div class="cm-cell cm-bad">205</div>
+                <div class="cm-cell cm-good">9,795</div>
+              </div>
+            </div>
+            <div>
+              <div class="cm-caption" data-i18n="cmDual">Dual-stream alone @ 0.5 · macro-F1 0.9774</div>
+              <div class="cm-grid">
+                <div></div>
+                <div class="cm-head" data-i18n="cmPredReal">Predicted real</div>
+                <div class="cm-head" data-i18n="cmPredAi">Predicted AI</div>
+                <div class="cm-head cm-side" data-i18n="cmActReal">Actual real</div>
+                <div class="cm-cell cm-good">9,737</div>
+                <div class="cm-cell cm-bad">263</div>
+                <div class="cm-head cm-side" data-i18n="cmActAi">Actual AI</div>
+                <div class="cm-cell cm-bad">189</div>
+                <div class="cm-cell cm-good">9,811</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="eval-grid-2">
+          <div class="eval-block">
+            <h3 data-i18n="evalOpT">Operating point &amp; calibration</h3>
+            <ul>
+              <li data-i18n="op1">Default threshold 0.5: accuracy 97.80%, FPR 2.35%.</li>
+              <li data-i18n="op2">Low-miss alternative 0.165 (chosen on validation for ~5% FPR): recall 99.19%, FPR 5.71%.</li>
+              <li data-i18n="op3">Dual-stream confidence calibrated with temperature scaling on validation (T = 1.066).</li>
+              <li data-i18n="op4">Scores are shown as likelihoods; wrongly flagging a real photo is treated as the costly error.</li>
+            </ul>
+          </div>
+          <div class="eval-block">
+            <h3 data-i18n="evalStackT">Stacking meta-learner</h3>
+            <ul>
+              <li data-i18n="st1">L2 (ridge) logistic regression over each member's logit(P(AI)); C = 31.6 chosen by 5-fold CV.</li>
+              <li data-i18n="st2">Out-of-fold on validation: ROC-AUC 0.9977, accuracy 97.80%.</li>
+              <li data-i18n="st3">Learned weights: dual-stream +7.53, ViT −0.29, Swin +0.17.</li>
+              <li data-i18n="st4">It lifts accuracy from 63.8% (majority vote) to 97.8% by down-weighting members that do not transfer to CIFAKE.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="evalTrainT">Training setup (dual-stream member)</h3>
+          <ul class="eval-cols">
+            <li data-i18n="tr1">Backbone: ResNet34 (ImageNet-pretrained) + 2D-FFT frequency branch</li>
+            <li data-i18n="tr2">Native 32×32 input, no upsampling</li>
+            <li data-i18n="tr3">6 epochs, batch 256, AdamW (lr 3e-4, wd 0.01), cosine schedule, mixed precision</li>
+            <li data-i18n="tr4">Augmentation: random JPEG re-compression (Q50–95), reflect-pad crop, flip, colour jitter</li>
+            <li data-i18n="tr5">Best epoch selected on validation ROC-AUC</li>
+            <li data-i18n="tr6">Trained on a Kaggle GPU in about 20 minutes</li>
+          </ul>
+        </div>
+
+        <div class="eval-block eval-block-warn">
+          <h3 data-i18n="evalUnseenT">Unseen-generator performance</h3>
+          <p data-i18n="evalUnseenD">CIFAKE contains a single generator (Stable Diffusion v1.4), so it has no unseen-generator split and we cannot measure that AUC ourselves. The organizers compute overall and unseen-generator AUC on their held-out set through our predict interface.</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="evalLimT">Known limitations</h3>
+          <ul>
+            <li data-i18n="lim1">Trained on one generator: accuracy on newer or unseen generators is not measured and may be substantially lower.</li>
+            <li data-i18n="lim2">The dual-stream member sees images at 32×32, so fine high-resolution artifacts in large images are discarded.</li>
+            <li data-i18n="lim3">ViT and Swin are near chance on CIFAKE (AUC 0.41 and 0.65), so the CIFAKE-fitted stacker relies almost entirely on the dual-stream model.</li>
+            <li data-i18n="lim4">The attention overlay shows where the ViT member attended; it is not a verified localisation of artifacts.</li>
+            <li data-i18n="lim5">Metadata signatures can be stripped or forged; a declared generator is reported as metadata evidence only.</li>
+          </ul>
         </div>
 
       </div>
     </div>
 
-    <!-- Mode 3: Dedicated 6 Team Directorate Members Section (Hidden by Default) -->
+    <!-- Mode: methodology -->
+    <div class="gov-card" id="aboutSection" style="display: none;">
+      <div class="gov-card-header">
+        <h2 class="gov-card-title">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          <span data-i18n="methodTitle">Methodology</span>
+        </h2>
+      </div>
+      <div class="gov-card-body eval-body">
+
+        <div class="eval-block">
+          <h3 data-i18n="mModulesT">Modules in this submission</h3>
+          <div>
+            <span class="module-chip chip-built" data-i18n="chipCore">Core: real vs AI classifier</span>
+            <span class="module-chip chip-built" data-i18n="chipA">A: Explanation</span>
+            <span class="module-chip chip-built" data-i18n="chipC">C: Robustness</span>
+            <span class="module-chip chip-built" data-i18n="chipD">D: Provenance &amp; metadata</span>
+            <span class="module-chip chip-built" data-i18n="chipF">F: Deployable web app</span>
+          </div>
+          <p class="note-muted" data-i18n="mNotD">Not included in this submission: B (generator attribution), E (image-text consistency), G (active defence).</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="mPipeT">Pipeline</h3>
+          <p data-i18n="mPipeD">Image → Level 1: provenance metadata check (explicit AI-generator signature or C2PA manifest) → Level 2: stacked pixel ensemble → calibrated likelihood → explanation cues, attention overlay and degradation re-test → verdict shown as "likely AI-generated" or "likely real".</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="mCoreT">Core: stacked 3-model ensemble</h3>
+          <p data-i18n="mCoreD">Members: ViT-Base (dima806/deepfake_vs_real_image_detection), Swin (Organika/sdxl-detector), and our ResNet34 + 2D-FFT dual-stream model trained on CIFAKE at native 32×32. Each member's P(AI) is fused by a ridge logistic stacking meta-learner fitted on CIFAKE validation images.</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="mAT">Module A: Explanation</h3>
+          <p data-i18n="mAD">Overlays the ViT member's last-layer attention map (14×14) and lists measured signals: each member's P(AI), its share of the stacked log-odds, the image's high-frequency spectral energy, and any metadata signature. The overlay shows where the model attended; it is not a verified localisation of artifacts.</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="mCT">Module C: Robustness to degradation</h3>
+          <p data-i18n="mCD">Re-encodes the uploaded image at JPEG quality 90/70/50/30 and downscales it to 75/50/25%, re-scores the original and every variant with the same pixel ensemble, and reports whether the verdict holds at each step.</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="mDT">Module D: Provenance &amp; metadata</h3>
+          <p data-i18n="mDD">Reads EXIF, XMP and PNG text fields, and C2PA Content Credentials when present. An explicit AI-generator signature is reported as metadata evidence and decides the verdict at Level 1; otherwise the pixel ensemble decides.</p>
+        </div>
+
+        <div class="eval-block">
+          <h3 data-i18n="mFT">Module F: Deployable web app</h3>
+          <p data-i18n="mFD">FastAPI backend (single-image and batch endpoints) with this bilingual dashboard: drag-and-drop upload, folder scan, adjustable overlay, text-size and high-contrast controls.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mode: team -->
     <div class="team-section-gov" id="teamSection" style="display: none;">
       <div class="team-header-banner-gov">
         <div>
-          <h2 class="team-title-gov" id="txtTeamSectionTitle">
+          <h2 class="team-title-gov">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 1-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-            Team Directorate & Project Contributors (Takniki Vibhag)
+            <span data-i18n="teamTitle">Team Takneeki Vibhag</span>
           </h2>
-          <span class="team-sub-gov" id="txtTeamSectionSub">SIH 2026 • Problem Statement C-433</span>
+          <span class="team-sub-gov" data-i18n="teamSub">SIH 2026 Internal Hackathon · Problem Statement 2 (C-433) · Team Leader: Rajvi Chauhan · 6/6 members · Registered</span>
         </div>
-        <span class="directorate-seal-badge">OFFICIAL RECORD / आधिकारिक रिकॉर्ड</span>
       </div>
 
       <div class="team-grid-6">
-        
-        <!-- Member 1 -->
         <div class="team-member-card-gov">
           <div class="card-gov-header-bar">
-            <span>OFFICER PROFILE</span>
-            <span class="member-badge-tag" id="txtM1Badge">Lead Contributor</span>
+            <span data-i18n="cardLblLead">TEAM LEADER</span>
+            <span class="member-badge-tag" data-i18n="m1Badge">Team Lead</span>
           </div>
           <div class="card-gov-body">
-            <img src="/static/assets/team/member1.jpg" alt="Shail Patel" class="member-avatar-gov">
+            <div class="member-avatar-gov member-initials" aria-hidden="true">RC</div>
             <div class="member-details-gov">
-              <h3 class="member-name-gov" id="txtM1Name">Shail Patel</h3>
-              <span class="member-designation-gov" id="txtM1Desig">Team Leader & System Architect</span>
-              <p class="member-responsibility-gov" id="txtM1Role">Overall project coordination, core architecture design, and SIH 2026 pipeline deployment.</p>
+              <h3 class="member-name-gov" data-i18n="m1Name">Rajvi Chauhan</h3>
+              <span class="member-designation-gov" data-i18n="m1Desig">Team Leader &amp; AI Research Lead</span>
+              <p class="member-responsibility-gov" data-i18n="m1Role">Team coordination, model training, data splits and frequency-domain features.</p>
             </div>
           </div>
         </div>
 
-        <!-- Member 2 -->
         <div class="team-member-card-gov">
           <div class="card-gov-header-bar">
-            <span>OFFICER PROFILE</span>
-            <span class="member-badge-tag" id="txtM2Badge">AI Core</span>
+            <span data-i18n="cardLbl">TEAM MEMBER</span>
+            <span class="member-badge-tag" data-i18n="m2Badge">Module C &amp; D</span>
           </div>
           <div class="card-gov-body">
-            <img src="/static/assets/team/member2.jpg" alt="Rajvi Chauhan" class="member-avatar-gov">
+            <div class="member-avatar-gov member-initials" aria-hidden="true">DP</div>
             <div class="member-details-gov">
-              <h3 class="member-name-gov" id="txtM2Name">Rajvi Chauhan</h3>
-              <span class="member-designation-gov" id="txtM2Desig">Principal AI Research Lead</span>
-              <p class="member-responsibility-gov" id="txtM2Role">Neural network training, generalisation splits, and frequency domain artifact extraction.</p>
+              <h3 class="member-name-gov" data-i18n="m2Name">Divyesh Prajapati</h3>
+              <span class="member-designation-gov" data-i18n="m2Desig">Provenance &amp; Robustness</span>
+              <p class="member-responsibility-gov" data-i18n="m2Role">Module D EXIF/C2PA metadata parser and Module C degradation re-testing.</p>
             </div>
           </div>
         </div>
 
-        <!-- Member 3 -->
         <div class="team-member-card-gov">
           <div class="card-gov-header-bar">
-            <span>OFFICER PROFILE</span>
-            <span class="member-badge-tag" id="txtM3Badge">Module A Lead</span>
+            <span data-i18n="cardLbl">TEAM MEMBER</span>
+            <span class="member-badge-tag" data-i18n="m3Badge">Module F</span>
           </div>
           <div class="card-gov-body">
-            <img src="/static/assets/team/member4.jpg" alt="Kasak Gohil" class="member-avatar-gov">
+            <div class="member-avatar-gov member-initials" aria-hidden="true">SM</div>
             <div class="member-details-gov">
-              <h3 class="member-name-gov" id="txtM3Name">Kasak Gohil</h3>
-              <span class="member-designation-gov" id="txtM3Desig">Computer Vision & Grad-CAM Specialist</span>
-              <p class="member-responsibility-gov" id="txtM3Role">Module A Explainability engine, visual cue localization, and Layer-CAM heatmap generation.</p>
+              <h3 class="member-name-gov" data-i18n="m3Name">Sarvesh Mudaliar</h3>
+              <span class="member-designation-gov" data-i18n="m3Desig">Full-Stack Engineer</span>
+              <p class="member-responsibility-gov" data-i18n="m3Role">Module F web dashboard, accessibility features and FastAPI integration.</p>
             </div>
           </div>
         </div>
 
-        <!-- Member 4 -->
         <div class="team-member-card-gov">
           <div class="card-gov-header-bar">
-            <span>OFFICER PROFILE</span>
-            <span class="member-badge-tag" id="txtM4Badge">Module E Lead</span>
+            <span data-i18n="cardLbl">TEAM MEMBER</span>
+            <span class="member-badge-tag" data-i18n="m4Badge">Research</span>
           </div>
           <div class="card-gov-body">
-            <img src="/static/assets/team/member3.jpg" alt="Henil Shah" class="member-avatar-gov">
+            <div class="member-avatar-gov member-initials" aria-hidden="true">HS</div>
             <div class="member-details-gov">
-              <h3 class="member-name-gov" id="txtM4Name">Henil Shah</h3>
-              <span class="member-designation-gov" id="txtM4Desig">Multimodal NLP & CLIP Alignment Lead</span>
-              <p class="member-responsibility-gov" id="txtM4Role">Module E text-image semantic matching, claim consistency verification, and prompt auditing.</p>
+              <h3 class="member-name-gov" data-i18n="m4Name">Shah Henil Sandeepkumar</h3>
+              <span class="member-designation-gov" data-i18n="m4Desig">Multimodal &amp; Evaluation</span>
+              <p class="member-responsibility-gov" data-i18n="m4Role">Multimodal image-text research and evaluation reporting.</p>
             </div>
           </div>
         </div>
 
-        <!-- Member 5 -->
         <div class="team-member-card-gov">
           <div class="card-gov-header-bar">
-            <span>OFFICER PROFILE</span>
-            <span class="member-badge-tag" id="txtM5Badge">Module D & G Lead</span>
+            <span data-i18n="cardLbl">TEAM MEMBER</span>
+            <span class="member-badge-tag" data-i18n="m5Badge">AI Core</span>
           </div>
           <div class="card-gov-body">
-            <img src="/static/assets/team/member5.jpg" alt="Divyesh Prajapati" class="member-avatar-gov">
+            <div class="member-avatar-gov member-initials" aria-hidden="true">SP</div>
             <div class="member-details-gov">
-              <h3 class="member-name-gov" id="txtM5Name">Divyesh Prajapati</h3>
-              <span class="member-designation-gov" id="txtM5Desig">Security & Active Defense Specialist</span>
-              <p class="member-responsibility-gov" id="txtM5Role">Module D EXIF/C2PA metadata parser and Module G adversarial attack testing framework.</p>
+              <h3 class="member-name-gov" data-i18n="m5Name">Shail Kiran Patel</h3>
+              <span class="member-designation-gov" data-i18n="m5Desig">System Architect</span>
+              <p class="member-responsibility-gov" data-i18n="m5Role">Core architecture, stacked-ensemble training pipeline and deployment.</p>
             </div>
           </div>
         </div>
 
-        <!-- Member 6 -->
         <div class="team-member-card-gov">
           <div class="card-gov-header-bar">
-            <span>OFFICER PROFILE</span>
-            <span class="member-badge-tag" id="txtM6Badge">Module F Lead</span>
+            <span data-i18n="cardLbl">TEAM MEMBER</span>
+            <span class="member-badge-tag" data-i18n="m6Badge">Module A</span>
           </div>
           <div class="card-gov-body">
-            <img src="/static/assets/team/member6.jpg" alt="Sarvesh Mudaliar" class="member-avatar-gov">
+            <div class="member-avatar-gov member-initials" aria-hidden="true">KG</div>
             <div class="member-details-gov">
-              <h3 class="member-name-gov" id="txtM6Name">Sarvesh Mudaliar</h3>
-              <span class="member-designation-gov" id="txtM6Desig">Web Infrastructure & Full-Stack Engineer</span>
-              <p class="member-responsibility-gov" id="txtM6Role">Module F Real-time web application dashboard, GIGW UI design system, and FastAPI integration.</p>
+              <h3 class="member-name-gov" data-i18n="m6Name">Kasak Gohil</h3>
+              <span class="member-designation-gov" data-i18n="m6Desig">Computer Vision &amp; Explainability</span>
+              <p class="member-responsibility-gov" data-i18n="m6Role">Module A attention overlay and measured explanation cues.</p>
             </div>
           </div>
         </div>
-
       </div>
     </div>
 
-    <!-- Mode 4: Dedicated Technical Methodology Section (#about) (Hidden by Default) -->
-    <div class="gov-card" id="aboutSection" style="display: none;">
-      <div class="gov-card-header">
-        <h2 class="gov-card-title" id="txtAboutHeading">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-          Technical Methodology & Forensic Framework Specifications
-        </h2>
-        <span style="font-size: 0.8rem; font-weight: 700; color: var(--gov-navy);" id="txtAboutSub">SIH 2026 C-433 Technical Spec</span>
-      </div>
-      <div class="gov-card-body" style="display: grid; gap: 1.25rem;">
-        
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
-          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodCoreTitle">1. Mandatory Core Task: Unseen Generator Generalisation</h3>
-          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodCoreDesc">
-            SignalScope uses a transfer-learning convolutional backbone paired with spatial noise residual extraction (FFT/DCT high-frequency artifact analysis). Models are trained on the CIFAKE train split and evaluated on its held-out test split (CIFAR-10 photos vs. Stable Diffusion v1.4 images) under calibrated ROC-AUC metrics.
-          </p>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
-          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModATitle">2. Bonus Module A: Faithful Visual Explanations (Grad-CAM)</h3>
-          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModADesc">
-            Provides localized visual saliency heatmaps highlighting exact pixel-level anomalies such as texture warping, irregular specular reflections, and anatomical flaws. Cites grounded natural language points without over-claiming certainty.
-          </p>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
-          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModBTitle">3. Bonus Module B: Generator Family & Model Architecture Attribution</h3>
-          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModBDesc">
-            Classifies generator families into Latent Diffusion, Generative Adversarial Networks (GANs), and Autoregressive Transformer architectures. Provides granular probability distributions across specific underlying models.
-          </p>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
-          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModCTitle">4. Bonus Module C: Robustness Under Image Degradation Vectors</h3>
-          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModCDesc">
-            Evaluates prediction resilience under severe lossy compression (JPEG Q30–Q90), downsampling, spatial noise addition, and social media platform re-encoding pipelines.
-          </p>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
-          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModDTitle">5. Bonus Module D: Provenance, EXIF & Cryptographic C2PA Verification</h3>
-          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModDDesc">
-            Extracts hardware camera EXIF records and validates Coalition for Content Provenance and Authenticity (C2PA) digital signatures to detect synthetic header tampering.
-          </p>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
-          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModETitle">6. Bonus Module E: Multimodal Image-Text Alignment & Claim Verification</h3>
-          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModEDesc">
-            Employs CLIP cross-modal semantic embeddings to evaluate alignment between submitted image content and accompanying news captions, identifying out-of-context misrepresentation.
-          </p>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
-          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModFTitle">7. Bonus Module F: Real-time Web Dashboard & REST API Architecture</h3>
-          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModFDesc">
-            Full-stack web application built following GIGW 3.0 government accessibility standards, backed by FastAPI asynchronous microservices for low-latency batch image scanning.
-          </p>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-left: 4px solid var(--gov-navy); padding: 1.25rem; border-radius: 4px;">
-          <h3 style="font-size: 1rem; font-weight: 800; color: var(--gov-navy); margin-bottom: 0.5rem;" id="txtMethodModGTitle">8. Bonus Module G: Active Defense & Adversarial Attack Vulnerability Testing</h3>
-          <p style="font-size: 0.85rem; color: var(--text-medium); line-height: 1.5;" id="txtMethodModGDesc">
-            Tests classifier robustness against adversarial perturbation attacks (FGSM, PGD, spatial blurring) and applies targeted defensive smoothing to maintain detection reliability.
-          </p>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Results Display Grid (Official Forensic Certificate View) -->
+    <!-- Results (single image) -->
     <div class="results-grid" id="resultsGrid" style="display: none;">
-      
-      <!-- Left Column: Forensic Report Certificate & Heatmap Overlay -->
+
       <div class="certificate-card">
         <div class="cert-header">
           <div>
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--gov-navy);" id="txtCertHeader">FORENSIC VERIFICATION REPORT</h3>
-            <span style="font-size: 0.75rem; color: var(--text-muted);" id="txtCertSub">Calibrated Likelihood Standards • SignalScope Certificate</span>
+            <h3 class="cert-title" data-i18n="certHeader">LIKELIHOOD ASSESSMENT</h3>
+            <span class="cert-sub" id="resultFilename">-</span>
           </div>
-          <span class="cert-stamp-badge" id="txtCertStamp">EVALUATED</span>
+          <span class="cert-stamp-badge" id="resultTiming">-</span>
         </div>
 
         <div class="verdict-banner-gov" id="verdictBanner">
           <div>
-            <div class="verdict-title-gov" id="verdictLabel">LIKELY FAKE</div>
-            <div style="font-size: 0.75rem; color: var(--text-muted);" id="verdictSubtitle">Probability Assessment Under Module Core</div>
+            <div class="verdict-title-gov" id="verdictLabel">-</div>
+            <div class="verdict-subtitle" id="verdictSubtitle">-</div>
           </div>
-          <div class="verdict-score-gov" id="verdictScore">88.5%</div>
+          <div class="verdict-score-gov" id="verdictScore">-</div>
         </div>
 
         <div class="image-frame-gov">
-          <img id="baseImage" class="base-img" src="" alt="Submitted Artifact">
-          <img id="heatmapImage" class="heatmap-img" src="" alt="Grad-CAM Heatmap Overlay">
+          <img id="baseImage" class="base-img" src="" alt="Submitted image">
+          <img id="heatmapImage" class="heatmap-img" src="" alt="Attention overlay">
         </div>
 
         <div class="controls-bar-gov">
           <div class="slider-group-gov">
-            <label for="opacitySlider" id="txtHeatmapLabel">Grad-CAM Heatmap Overlay</label>
+            <label for="opacitySlider" data-i18n="heatmapLabel">Attention overlay (ViT)</label>
             <input type="range" id="opacitySlider" min="0" max="100" value="60" oninput="updateHeatmapOpacity(this.value)">
           </div>
-          <span class="res-tag-gov" id="imageResolution">512x512</span>
+          <span class="res-tag-gov" id="imageResolution">-</span>
+        </div>
+        <p class="note-muted cert-note" id="saliencyNote"></p>
+
+        <div class="ensemble-box">
+          <h4 class="ensemble-title" data-i18n="ensT">How the verdict was reached</h4>
+          <div id="ensembleContainer"></div>
         </div>
       </div>
 
-      <!-- Right Column: Interactive Bonus Modules Tabs -->
       <div class="modules-card-gov">
         <div class="tabs-header-gov">
-          <button class="tab-btn-gov active" id="txtTabA" onclick="switchTab('tab-a', this)">Module A (Explanations)</button>
-          <button class="tab-btn-gov" id="txtTabB" onclick="switchTab('tab-b', this)">Module B (Attribution)</button>
-          <button class="tab-btn-gov" id="txtTabC" onclick="switchTab('tab-c', this)">Module C (Robustness)</button>
-          <button class="tab-btn-gov" id="txtTabD" onclick="switchTab('tab-d', this)">Module D (Metadata)</button>
-          <button class="tab-btn-gov" id="txtTabE" onclick="switchTab('tab-e', this)">Module E (Multimodal)</button>
-          <button class="tab-btn-gov" id="txtTabG" onclick="switchTab('tab-g', this)">Module G (Defense)</button>
+          <button class="tab-btn-gov active" onclick="switchTab('tab-a', this)"><span data-i18n="tabA">A · Explanation</span></button>
+          <button class="tab-btn-gov" onclick="switchTab('tab-c', this)"><span data-i18n="tabC">C · Robustness</span></button>
+          <button class="tab-btn-gov" onclick="switchTab('tab-d', this)"><span data-i18n="tabD">D · Provenance</span></button>
         </div>
 
-        <!-- Tab A: Module A Explainability -->
         <div id="tab-a" class="tab-content active">
-          <h3 class="tab-heading-gov" id="txtHeadTabA">Headline Visual Artifact Cites & Explanations</h3>
-          <p id="explanationSummary" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.85rem;"></p>
+          <h3 class="tab-heading-gov" data-i18n="headA">Measured signals behind the verdict</h3>
+          <p id="explanationSummary" class="tab-summary"></p>
           <div id="visualCuesContainer"></div>
         </div>
 
-        <!-- Tab B: Module B Attribution -->
-        <div id="tab-b" class="tab-content">
-          <h3 class="tab-heading-gov" id="txtHeadTabB">Generator Family & Model Architecture Attribution</h3>
-          <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblAttrFamily">Predicted Generator Family</span>
-            <span class="metric-val-gov" id="attrFamily">-</span>
-          </div>
-          <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblAttrModel">Likely Architecture Model</span>
-            <span class="metric-val-gov" id="attrModel">-</span>
-          </div>
-          <div style="margin-top: 1.25rem;">
-            <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase;" id="lblFamProb">Family Probability Breakdown</h4>
-            <div id="familyProbContainer"></div>
-          </div>
-        </div>
-
-        <!-- Tab C: Module C Robustness -->
         <div id="tab-c" class="tab-content">
-          <h3 class="tab-heading-gov" id="txtHeadTabC">Robustness Under Image Degradation Vectors</h3>
+          <h3 class="tab-heading-gov" data-i18n="headC">Verdict under JPEG compression and downscaling</h3>
           <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblRobustRating">Overall Stability Rating</span>
+            <span class="metric-label-gov" data-i18n="lblPixelVerdict">Pixel detector on the original (metadata ignored)</span>
+            <span class="metric-val-gov" id="robustnessPixel">-</span>
+          </div>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" data-i18n="lblRating">Stability</span>
             <span class="metric-val-gov" id="robustnessRating">-</span>
           </div>
           <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblRobustJpeg">Stable Under JPEG Q70 Compression</span>
+            <span class="metric-label-gov" data-i18n="lblJpeg70">Verdict kept at JPEG Q70</span>
             <span class="metric-val-gov" id="robustnessJpeg">-</span>
           </div>
-          <div style="margin-top: 1.25rem;">
-            <h4 style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin-bottom: 0.4rem; text-transform: uppercase;" id="lblJpegCurve">JPEG Compression Degradation Curve</h4>
-            <div id="jpegCurveContainer"></div>
+          <div class="metric-row-gov">
+            <span class="metric-label-gov" data-i18n="lblResize50">Verdict kept at 50% size</span>
+            <span class="metric-val-gov" id="robustnessResize">-</span>
           </div>
+          <h4 class="sub-heading" data-i18n="lblJpegCurve">JPEG re-compression (AI-likelihood score)</h4>
+          <div id="jpegCurveContainer"></div>
+          <h4 class="sub-heading" data-i18n="lblResizeCurve">Downscaling (AI-likelihood score)</h4>
+          <div id="resizeCurveContainer"></div>
+          <p class="note-muted" id="robustnessMethod"></p>
         </div>
 
-        <!-- Tab D: Module D Metadata -->
         <div id="tab-d" class="tab-content">
-          <h3 class="tab-heading-gov" id="txtHeadTabD">Provenance & Cryptographic Header Inspection</h3>
+          <h3 class="tab-heading-gov" data-i18n="headD">Provenance &amp; file metadata</h3>
           <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblExif">EXIF Metadata Status</span>
+            <span class="metric-label-gov" data-i18n="lblExif">EXIF metadata</span>
             <span class="metric-val-gov" id="metaHasExif">-</span>
           </div>
           <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblC2pa">C2PA Signed Manifest Status</span>
+            <span class="metric-label-gov" data-i18n="lblC2pa">C2PA Content Credentials</span>
             <span class="metric-val-gov" id="metaHasC2pa">-</span>
           </div>
           <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblCamera">Hardware Camera Record</span>
+            <span class="metric-label-gov" data-i18n="lblCamera">Camera record</span>
             <span class="metric-val-gov" id="metaCamera">-</span>
           </div>
           <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblMetaAssessment">Integrity Assessment</span>
-            <span class="metric-val-gov" id="metaAssessment" style="font-size: 0.8rem;">-</span>
-          </div>
-        </div>
-
-        <!-- Tab E: Module E Multimodal -->
-        <div id="tab-e" class="tab-content">
-          <h3 class="tab-heading-gov" id="txtHeadTabE">Multimodal Image-Text Alignment & Claim Consistency</h3>
-          <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblCaptionText">Target Claim Text</span>
-            <span class="metric-val-gov" id="multiCaption">-</span>
+            <span class="metric-label-gov" data-i18n="lblDeclaredGen">Generator declared in metadata</span>
+            <span class="metric-val-gov" id="metaGenerator">-</span>
           </div>
           <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblClipScore">CLIP Semantic Alignment Score</span>
-            <span class="metric-val-gov" id="multiScore">-</span>
-          </div>
-          <div class="metric-row-gov">
-            <span class="metric-label-gov" id="lblMultiAssessment">Alignment Verdict</span>
-            <span class="metric-val-gov" id="multiAssessment">-</span>
+            <span class="metric-label-gov" data-i18n="lblMetaAssess">Assessment</span>
+            <span class="metric-val-gov metric-val-wrap" id="metaAssessment">-</span>
           </div>
         </div>
-
-        <!-- Tab G: Module G Active Defence -->
-        <div id="tab-g" class="tab-content">
-          <h3 class="tab-heading-gov" id="txtHeadTabG">Adversarial Defense & Vulnerability Testing</h3>
-          <div id="activeDefenseContainer"></div>
-        </div>
-
       </div>
     </div>
 
-    <!-- Batch Scan Results View -->
+    <!-- Batch results -->
     <div class="batch-section-gov" id="batchSection" style="display: none;">
       <div class="gov-card-header" style="background: transparent; padding: 0 0 1rem 0;">
-        <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--gov-navy);" id="txtBatchResultsTitle">
-          Bulk Directory Audit Summary Results
-        </h3>
+        <h3 class="batch-title" data-i18n="batchResT">Batch scan results</h3>
       </div>
-
-      <!-- Batch Overview Stats Grid -->
       <div class="batch-stats-grid-gov">
         <div class="stat-card-gov">
-          <div class="stat-label-gov" id="txtStatTotal">Total Submitted Artifacts</div>
+          <div class="stat-label-gov" data-i18n="statTotal">Images scanned</div>
           <div class="stat-value-gov" id="statTotalImages">0</div>
         </div>
         <div class="stat-card-gov">
-          <div class="stat-label-gov" id="txtStatAi" style="color: #991B1B;">Probable Synthetic</div>
-          <div class="stat-value-gov" id="statAiCount" style="color: #991B1B;">0</div>
+          <div class="stat-label-gov stat-ai" data-i18n="statAi">Likely AI-generated</div>
+          <div class="stat-value-gov stat-ai" id="statAiCount">0</div>
         </div>
         <div class="stat-card-gov">
-          <div class="stat-label-gov" id="txtStatReal" style="color: #166534;">Probable Authentic Real</div>
-          <div class="stat-value-gov" id="statRealCount" style="color: #166534;">0</div>
+          <div class="stat-label-gov stat-real" data-i18n="statReal">Likely real</div>
+          <div class="stat-value-gov stat-real" id="statRealCount">0</div>
         </div>
         <div class="stat-card-gov">
-          <div class="stat-label-gov" id="txtStatLatency">Total Processing Latency</div>
+          <div class="stat-label-gov" data-i18n="statLatency">Total time</div>
           <div class="stat-value-gov" id="statLatency">0.0s</div>
         </div>
       </div>
-      
-      <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 4px;">
+      <div class="table-scroll">
         <table class="table-gov">
           <thead>
             <tr>
-              <th id="txtThFilename">Filename</th>
-              <th id="txtThVerdict">Verdict</th>
-              <th id="txtThConfidence">Confidence Score</th>
-              <th id="txtThModel">Attribution Architecture</th>
-              <th id="txtThActions">Actions</th>
+              <th data-i18n="thFile">File</th>
+              <th data-i18n="thVerdict">Verdict</th>
+              <th class="num" data-i18n="thScore">AI-likelihood</th>
+              <th data-i18n="thLevel">Decided by</th>
+              <th data-i18n="thAction">Details</th>
             </tr>
           </thead>
-          <tbody id="batchTableBody">
-          </tbody>
+          <tbody id="batchTableBody"></tbody>
         </table>
       </div>
     </div>
 
   </main>
 
-  <!-- 8. Footer -->
   <footer class="gov-footer">
-    <div class="footer-bottom-bar" id="txtFooterCopyright">
-      SignalScope Media Forensics & Authenticity Engine
-    </div>
+    <div class="footer-bottom-bar" data-i18n="footerText">SignalScope · Team Takneeki Vibhag · SIH 2026 Internal Hackathon, Problem Statement 2 (C-433) · Academic hackathon project, not affiliated with the Government of India.</div>
   </footer>
 
   <script src="/static/app.js"></script>
