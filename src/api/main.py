@@ -133,6 +133,25 @@ async def websocket_analyze(websocket: WebSocket):
         await websocket.send_json({"type": "error", "message": str(e)})
 
 
+@app.on_event("startup")
+def preload_models():
+    """
+    Loads every ensemble member (downloading on first run) before the server accepts requests,
+    so the first prediction is not a silent multi-minute wait. Set SIGNALSCOPE_SKIP_PRELOAD=1 to skip.
+    """
+    if os.environ.get("SIGNALSCOPE_SKIP_PRELOAD"):
+        return
+    from model.ensemble import ENSEMBLE_MEMBERS, load_dual_stream, load_ensemble_model, load_stacker
+
+    print("SignalScope: loading models (first run downloads about 750 MB)...")
+    for cfg in ENSEMBLE_MEMBERS:
+        if cfg["id"] != "dual_stream_freq":
+            load_ensemble_model(cfg["name"])
+    ready = load_dual_stream() is not None and load_stacker() is not None
+    print("SignalScope: models ready (stacked ensemble)" if ready else
+          "SignalScope: WARNING - dual-stream checkpoint or stacker missing; running majority-vote fallback")
+
+
 # Mount static frontend assets
 app.mount("/static", StaticFiles(directory=UI_DIR), name="static")
 

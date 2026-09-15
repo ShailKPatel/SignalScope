@@ -117,6 +117,41 @@ def evaluate_hf_member(model_name, pil_img, with_cam=True):
         return None, None
 
 
+_DEFAULT_WEIGHTS_URL = "https://github.com/ShailKPatel/SignalScope/releases/download/v1.0/best_model.pt"
+_DEFAULT_WEIGHTS_SHA256 = "d54d71008c7e8069af5aabc6409f442761f8009e1ee136181a4dba6e826011cb"
+WEIGHTS_URL = os.environ.get("SIGNALSCOPE_WEIGHTS_URL", _DEFAULT_WEIGHTS_URL)
+
+
+def ensure_dual_stream_checkpoint():
+    """Downloads the release checkpoint once when no local checkpoint exists. Returns True if one is present."""
+    if any(os.path.exists(p) for p in _DUAL_STREAM_CHECKPOINTS):
+        return True
+    import hashlib
+    import urllib.request
+
+    dest = os.path.normpath(_DUAL_STREAM_CHECKPOINTS[-1])
+    tmp = dest + ".part"
+    try:
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        print(f"Dual-stream checkpoint missing; downloading {WEIGHTS_URL} (87 MB, one time)...")
+        sha = hashlib.sha256()
+        with urllib.request.urlopen(WEIGHTS_URL, timeout=60) as resp, open(tmp, "wb") as out:
+            for chunk in iter(lambda: resp.read(1 << 20), b""):
+                sha.update(chunk)
+                out.write(chunk)
+        if WEIGHTS_URL == _DEFAULT_WEIGHTS_URL and sha.hexdigest() != _DEFAULT_WEIGHTS_SHA256:
+            raise ValueError(f"checksum mismatch ({sha.hexdigest()})")
+        os.replace(tmp, dest)
+        print(f"Saved dual-stream checkpoint to {dest}")
+        return True
+    except Exception as e:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        print(f"Could not download the dual-stream checkpoint ({e}). Download {WEIGHTS_URL} to {dest} manually; "
+              "until then the ensemble runs in majority-vote fallback.")
+        return False
+
+
 def load_dual_stream():
     """Loads the dual-stream checkpoint once. Returns (model, transform, temperature) or None."""
     if "entry" in _DUAL_STREAM:
@@ -127,6 +162,8 @@ def load_dual_stream():
 
     import torchvision.transforms as transforms
     from retrain.backbone import SignalScopeDualStreamModel
+
+    ensure_dual_stream_checkpoint()
 
     for path in _DUAL_STREAM_CHECKPOINTS:
         if not os.path.exists(path):
@@ -178,6 +215,83 @@ def evaluate_dual_stream_member(pil_img):
             return float(torch.sigmoid(logit / temperature).item()), None
     except Exception as e:
         print(f"Dual-stream member note: {e}")
+        return None, None
+
+
+_SALIENCY_SAMPLES = 16
+_SALIENCY_NOISE = 0.15
+_MASK_FRACTION = 0.10
+_RANDOM_MASKS = 5
+
+
+def _to_image_frame(sal, img_size, uses_center_crop, max_side=256):
+    """Places a model-input saliency map into the original image's frame (zeros outside a center crop)."""
+    w, h = img_size
+    scale = min(1.0, max_side / max(w, h))
+    cw, ch = max(1, round(w * scale)), max(1, round(h * scale))
+    src = Image.fromarray(sal, mode="F")
+    if not uses_center_crop:
+        return np.asarray(src.resize((cw, ch), Image.BILINEAR), dtype=np.float32)
+    side = max(1, round(min(w, h) * scale))
+    canvas = np.zeros((ch, cw), dtype=np.float32)
+    top, left = (ch - side) // 2, (cw - side) // 2
+    canvas[top:top + side, left:left + side] = np.asarray(src.resize((side, side), Image.BILINEAR), dtype=np.float32)
+    return canvas
+
+
+def dual_stream_saliency(pil_img):
+    """
+    Saliency for the dual-stream member, the member that dominates the stacked decision.
+
+    Map: SmoothGrad, the mean |d logit / d pixel| over noisy copies of the model input (fixed seed).
+    Check: a deletion test. Log-odds change after replacing the top-10% salient input pixels with the
+    normalization mean, versus the same number of random pixels (mean of several draws). A larger shift
+    for salient pixels is evidence that the map points at pixels the member relies on.
+
+    Returns (map in the image frame scaled to [0, 1], check dict), or (None, None).
+    """
+    entry = load_dual_stream()
+    if entry is None:
+        return None, None
+    model, tf, temperature, square_size = entry
+    try:
+        x = tf(pil_img.convert("RGB")).unsqueeze(0)
+        gen = torch.Generator().manual_seed(0)
+        noise = torch.randn((_SALIENCY_SAMPLES,) + tuple(x.shape[1:]), generator=gen)
+        noisy = (x + _SALIENCY_NOISE * x.std() * noise).requires_grad_(True)
+        with torch.enable_grad():
+            grad, = torch.autograd.grad((model(noisy) / temperature).sum(), noisy)
+        raw = grad.abs().sum(dim=1).mean(dim=0).numpy()
+
+        n = raw.size
+        k = max(1, int(round(n * _MASK_FRACTION)))
+        rng = np.random.default_rng(0)
+        masks = [np.argsort(raw.ravel())[-k:]] + [rng.choice(n, k, replace=False) for _ in range(_RANDOM_MASKS)]
+        xs = x.repeat(len(masks) + 1, 1, 1, 1)
+        for i, idx in enumerate(masks, start=1):
+            rows, cols = np.unravel_index(idx, raw.shape)
+            xs[i, :, torch.as_tensor(rows), torch.as_tensor(cols)] = 0.0
+        with torch.no_grad():
+            logits = (model(xs) / temperature).squeeze(1).numpy().astype(np.float64)
+        probs = 1.0 / (1.0 + np.exp(-logits))
+
+        check = {
+            "method": "Deletion test on the dual-stream member",
+            "fraction_masked": _MASK_FRACTION,
+            "logit_original": round(float(logits[0]), 4),
+            "logit_shift_top_salient": round(float(logits[1] - logits[0]), 4),
+            "logit_shift_random_mean": round(float(np.mean(logits[2:]) - logits[0]), 4),
+            "p_ai_original": round(float(probs[0]), 4),
+            "p_ai_top_salient_masked": round(float(probs[1]), 4),
+            "p_ai_random_masked_mean": round(float(np.mean(probs[2:])), 4),
+        }
+        check["salient_exceeds_random"] = abs(check["logit_shift_top_salient"]) > abs(check["logit_shift_random_mean"])
+
+        hi = float(np.percentile(raw, 99))
+        sal = np.clip(raw / (hi + 1e-12), 0, 1).astype(np.float32)
+        return _to_image_frame(sal, pil_img.size, uses_center_crop=square_size is None), check
+    except Exception as e:
+        print(f"Dual-stream saliency note: {e}")
         return None, None
 
 
@@ -384,7 +498,7 @@ def score_images(pil_imgs):
 def run_ensemble_inference(pil_img):
     """Returns (score, composite_cam, breakdown). See _fuse for how score is formed."""
     t0 = time.time()
-    all_scored = score_members(pil_img, with_cam=True)
+    all_scored = score_members(pil_img, with_cam=False)
     scored = [(cfg, p, cam) for cfg, p, cam in all_scored if p is not None]
     if not scored:
         return None, None, {}
@@ -401,13 +515,7 @@ def run_ensemble_inference(pil_img):
         "is_ai_pred": p >= 0.5,
     } for cfg, p, _ in scored]
 
-    composite_cam = None
-    cams = [cam for _, _, cam in scored if cam is not None]
-    if cams:
-        valid = [c for c in cams if c.shape == cams[0].shape]
-        composite_cam = np.max(np.stack(valid, axis=0), axis=0)
-        if composite_cam.max() > 0:
-            composite_cam = (composite_cam - composite_cam.min()) / (composite_cam.max() - composite_cam.min() + 1e-8)
+    saliency_map, saliency_check = dual_stream_saliency(pil_img)
 
     breakdown = {
         "ensemble_strategy": strategy,
@@ -417,5 +525,6 @@ def run_ensemble_inference(pil_img):
         "mean_ai_probability": round(float(np.mean([p for _, p, _ in scored])), 4),
         "total_inference_ms": round((time.time() - t0) * 1000, 2),
         "family_models": model_results,
+        "saliency_check": saliency_check,
     }
-    return round(float(score), 4), composite_cam, breakdown
+    return round(float(score), 4), saliency_map, breakdown

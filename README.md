@@ -12,7 +12,7 @@ SignalScope classifies an image as *likely real* or *likely AI-generated* with a
 | Module | Status | What it actually does |
 | :--- | :---: | :--- |
 | **Core** real-vs-AI classifier | ✅ Built | 3-member stacked ensemble; score, verdict, operating point from the CIFAKE test split |
-| **A** Explanation | ✅ Built (limited) | ViT attention overlay + cues from measured signals (member P(AI), each member's share of the stacked log-odds, spectral energy). See limitations: the overlay comes from a member with little weight in the decision |
+| **A** Explanation | ✅ Built | SmoothGrad saliency overlay from the dual-stream member (the one that drives the decision), a per-image deletion check (do salient pixels move the score more than random ones?), and cues from measured signals (member P(AI), each member's share of the stacked log-odds, spectral energy) |
 | **B** Generator attribution | ❌ Not built | Reports a generator only when file metadata declares one (via Module D) |
 | **C** Robustness to degradation | ✅ Built | Re-encodes the uploaded image at JPEG Q90/70/50/30 and downscales to 75/50/25%, re-scores every variant, reports whether the verdict holds |
 | **D** Metadata & provenance | ✅ Built | EXIF / XMP / PNG text-chunk generator signatures, C2PA manifest read via `c2pa-python` |
@@ -24,26 +24,48 @@ SignalScope classifies an image as *likely real* or *likely AI-generated* with a
 
 ## 2. Setup & Run (about 10 minutes, CPU is enough)
 
-### Step 1: Clone and create an environment (Python 3.10+)
+Needs Python 3.10+ and internet on the first run: about 750 MB of model weights download once, automatically.
+
+### Step 1: Clone and create the virtual environment
+
+Linux / macOS:
 ```bash
 git clone https://github.com/ShailKPatel/SignalScope.git
 cd SignalScope
 python3 -m venv .venv
 source .venv/bin/activate
+pip install --upgrade pip
+# Recommended without an NVIDIA GPU: CPU-only torch is a far smaller download
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
 ```
 
-### Step 2: Download the trained dual-stream weights (87 MB)
-The stacking meta-learner (`retrain/checkpoints/stacking_metalearner.json`) and training metrics (`retrain/checkpoints/metrics.json`) are in the repo. The dual-stream weights are too large for git and ship as a GitHub Release asset:
-```bash
-curl -L -o retrain/checkpoints/best_model.pt \
-  https://github.com/ShailKPatel/SignalScope/releases/download/v1.0/best_model.pt
+Windows (PowerShell):
+```powershell
+git clone https://github.com/ShailKPatel/SignalScope.git
+cd SignalScope
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements.txt
 ```
-The two pretrained Hugging Face members (ViT and Swin, about 350 MB each) download automatically on the first prediction.
 
-Without `best_model.pt` the app still runs, but the meta-learner needs all three members, so it falls back to a majority vote of the two HF models. The reported metrics do not apply to that mode.
+### Step 2: Start the web app
+```bash
+python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+```
+On the first start the server downloads all model weights before it accepts requests. The terminal shows progress and then `SignalScope: models ready (stacked ensemble)`. What it downloads:
+* Dual-stream checkpoint `best_model.pt` (87 MB) from the [v1.0 GitHub Release](https://github.com/ShailKPatel/SignalScope/releases/tag/v1.0), saved to `retrain/checkpoints/` and checksum-verified.
+* ViT and Swin members (about 330 MB each) from Hugging Face, cached in `~/.cache/huggingface`.
 
-### Step 3: Reproduce a prediction from the command line
+Then open:
+* Dashboard: `http://localhost:8000`
+* API docs (Swagger): `http://localhost:8000/docs`
+
+If the automatic download is blocked (offline machine, proxy), download `best_model.pt` from the release page and place it at `retrain/checkpoints/best_model.pt`. Without it the app still runs, but in majority-vote fallback mode, where the reported metrics do not apply.
+
+### Step 3 (optional): Prediction from the command line
 ```bash
 python -c "
 from model.predict import predict_image
@@ -54,14 +76,7 @@ for p in ['test_images/cifake_real_0.png', 'test_images/cifake_fake_0.png']:
 ```
 Expected: `cifake_real_0.png -> likely real`, `cifake_fake_0.png -> likely AI-generated`, strategy `Stacked Generalization (ridge logistic meta-learner)`.
 
-### Step 4: Launch the web dashboard and API
-```bash
-python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
-```
-* Dashboard: `http://localhost:8000`
-* API docs (Swagger): `http://localhost:8000/docs`
-
-### Step 5: Smoke tests
+### Step 4 (optional): Smoke tests
 ```bash
 python test_ensemble_system.py   # ensemble, stacker math, REST + WebSocket
 python test_live_system.py       # Level 1 metadata path + Level 2 model path
@@ -131,7 +146,7 @@ Image (+ optional caption)
 ## 6. Known Limitations
 
 * **The ensemble adds little over the dual-stream model.** On CIFAKE the ViT scores below chance (AUC 0.41) and the Swin is weak (0.65). Both were fine-tuned on high-resolution data and see CIFAKE's 32×32 images upscaled. The meta-learner correctly assigns them near-zero weight.
-* **Explanation faithfulness is limited.** The overlay is the ViT member's attention, and the ViT barely influences the decision. The dual-stream model that drives the decision produces no map. The cues list measured numbers; they do not claim to localize artifacts. Samples: `report/explanation_samples/`.
+* **Explanation faithfulness is partial.** The overlay is SmoothGrad on the dual-stream member at its 32×32 input, so it is coarse. The deletion check shows salient pixels moving the score more than random pixels on 3 of the 4 bundled samples, not all; each result reports its own check. Cues list measured numbers and do not claim to localize artifacts. Samples: `report/explanation_samples/`.
 * **Single generator, low resolution.** Training data is SD v1.4 at 32×32, so performance on other generators, high-resolution photos, or real-world JPEGs is unmeasured. An earlier prototype on a different dataset (`trained-v1/metrics.json`) fell from 0.93 validation AUC to 0.70 on held-out generators. Expect a similar drop.
 * **Level 1 trusts self-declared metadata.** It is trivially stripped or forged. Absence of a signature is never treated as evidence of authenticity.
 * **CPU latency:** about 10 s per image, because Module C re-scores 7 variants.

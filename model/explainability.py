@@ -56,7 +56,8 @@ def _overlay_base64(width, height, saliency, is_ai_generated):
 
 
 def generate_heatmap_and_explanations(image_pil, confidence, is_ai_generated, saliency_map=None,
-                                      ensemble_info=None, metadata_evidence=None, saliency_source=None):
+                                      ensemble_info=None, metadata_evidence=None, saliency_source=None,
+                                      saliency_check=None):
     width, height = image_pil.size
     cues = []
 
@@ -71,6 +72,19 @@ def generate_heatmap_and_explanations(image_pil, confidence, is_ai_generated, sa
             c = contributions[m["model_id"]]
             detail += f" Its share of the stacked log-odds is {c:+.2f} ({'toward AI' if c > 0 else 'toward real'})."
         cues.append({"type": f"Member: {m['family']}", "detail": detail, "value": f"P(AI) {format_probability(m['ai_probability'])}"})
+
+    if saliency_check:
+        top, rand = saliency_check["logit_shift_top_salient"], saliency_check["logit_shift_random_mean"]
+        outcome = ("salient pixels move the score more than random ones, so the map tracks pixels the model uses"
+                   if saliency_check["salient_exceeds_random"] else
+                   "salient pixels do not move the score more than random ones, so treat the map with caution")
+        cues.append({
+            "type": "Saliency deletion check",
+            "detail": (f"Replacing the {int(saliency_check['fraction_masked'] * 100)}% most salient pixels changes the "
+                       f"dual-stream log-odds by {top:+.2f}; the same number of random pixels changes it by {rand:+.2f} "
+                       f"(mean of 5 draws). Here {outcome}."),
+            "value": f"salient {top:+.2f} vs random {rand:+.2f}",
+        })
 
     hf = high_frequency_energy_ratio(image_pil)
     cues.append({
@@ -90,8 +104,9 @@ def generate_heatmap_and_explanations(image_pil, confidence, is_ai_generated, sa
                     f"the measured signals behind it.")
 
     if saliency_map is not None:
-        localization = (f"{saliency_source or 'Model attention map'}. Shows where the model attended, "
-                        "not a verified localization of artifacts.")
+        localization = (f"{saliency_source or 'Model saliency map'}. Shows which pixels the score is most "
+                        "sensitive to; the deletion check cue tests whether they matter. Not a verified "
+                        "localization of generation artifacts.")
     else:
         localization = "Unavailable: no saliency map was produced for this input, so no overlay is drawn."
 

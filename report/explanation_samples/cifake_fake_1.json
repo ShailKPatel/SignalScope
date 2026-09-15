@@ -10,8 +10,19 @@
       "dual_stream_freq": 6.154
     }
   },
+  "saliency_check": {
+    "method": "Deletion test on the dual-stream member",
+    "fraction_masked": 0.1,
+    "logit_original": 6.6341,
+    "logit_shift_top_salient": -2.5556,
+    "logit_shift_random_mean": -1.0904,
+    "p_ai_original": 0.9987,
+    "p_ai_top_salient_masked": 0.9833,
+    "p_ai_random_masked_mean": 0.9955,
+    "salient_exceeds_random": true
+  },
   "summary": "The detector rates this image likely AI-generated (score >99.9%). 2 of 3 ensemble members lean AI. This is a likelihood assessment, not proof; the cues below list the measured signals behind it.",
-  "localization_quality": "ViT-Base member's last-layer CLS attention (14x14). The stacked decision is driven mainly by the dual-stream member, which produces no map, so this overlay is context, not the decision's evidence. Shows where the model attended, not a verified localization of artifacts.",
+  "localization_quality": "SmoothGrad pixel sensitivity of the dual-stream member, the member that drives the stacked decision, computed at its native input resolution. Shows which pixels the score is most sensitive to; the deletion check cue tests whether they matter. Not a verified localization of generation artifacts.",
   "cues": [
     {
       "type": "Member: Vision Transformer (ViT)",
@@ -27,6 +38,11 @@
       "type": "Member: Dual-Stream Spatial + 2D FFT Frequency",
       "detail": "SignalScope PyTorch Dual-Stream Backbone (ResNet34 + 2D Fast Fourier Transform (FFT)) scores P(AI) 99.9%. Its share of the stacked log-odds is +6.15 (toward AI).",
       "value": "P(AI) 99.9%"
+    },
+    {
+      "type": "Saliency deletion check",
+      "detail": "Replacing the 10% most salient pixels changes the dual-stream log-odds by -2.56; the same number of random pixels changes it by -1.09 (mean of 5 draws). Here salient pixels move the score more than random ones, so the map tracks pixels the model uses.",
+      "value": "salient -2.56 vs random -1.09"
     },
     {
       "type": "Spectral measurement",

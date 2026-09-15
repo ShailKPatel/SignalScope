@@ -32,7 +32,7 @@
 **Takeaways.** Stacking beats majority voting by 34 accuracy points. It does this by learning to ignore the two off-the-shelf detectors, which fail on 32×32 CIFAKE. Its gain over the dual-stream model alone is small (+0.06 pp accuracy, −0.28 pp FPR). **Unseen-generator AUC** cannot be measured on CIFAKE (one generator); organisers compute it.
 
 ## 5. Modules
-* **A:** overlay = ViT member's last-layer attention. Cues = each member's P(AI), its additive share of the stacked log-odds, and high-frequency spectral energy (reported for inspection, not used in the decision). No cue is templated text. Samples: `report/explanation_samples/`. **Faithfulness caveat:** the decision is driven by the dual-stream member, which has no map, so the overlay is context rather than evidence.
+* **A:** overlay = SmoothGrad pixel sensitivity of the dual-stream member, the member that drives the decision (16 noisy samples, fixed seed). Each result includes a **deletion check**: log-odds shift after masking the top-10% salient pixels vs. 10% random pixels (mean of 5). Cues = each member's P(AI), its additive share of the stacked log-odds, and high-frequency spectral energy (reported for inspection only). No cue is templated text. Samples: `report/explanation_samples/`.
 * **C:** the image is actually re-encoded (JPEG Q90/70/50/30) and downscaled (75/50/25%), and every variant is re-scored. Example: a CIFAKE fake held its verdict at every JPEG level, but dropped to 0.18 when downscaled to 24×24.
 * **D:** signature and C2PA parsing. A found signature short-circuits to "likely AI-generated (metadata)". A missing signature is never read as authenticity.
 * **F:** FastAPI REST + batch + WebSocket, web dashboard. Returns HTTP 503 rather than a made-up score when no detector loads.
@@ -40,6 +40,6 @@
 ## 6. Limitations & Failure Modes
 * Single generator (SD v1.4) at 32×32, so no evidence of generalisation to other generators or to high-resolution or compressed real-world images. A prior prototype on different data fell from 0.93 to 0.70 AUC on held-out generators.
 * Sensitive to small rescaling of 32×32 inputs (Module C example above).
-* Module A overlay is not faithful to the deciding model (see §5).
+* Module A saliency is coarse (32×32) and its deletion check passes on 3 of 4 bundled samples, not all.
 * Metadata signatures are trivially stripped or forged.
 * CPU latency ≈10 s per image, dominated by Module C re-scoring.
