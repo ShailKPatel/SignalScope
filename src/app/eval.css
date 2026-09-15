@@ -1,0 +1,68 @@
+/* Evaluation page, methodology blocks and result-panel additions. Uses the tokens in styles.css. */
+
+.modal-head { font-weight: 800; color: var(--gov-navy); margin-bottom: 0.35rem; }
+.modal-desc { color: var(--text-medium); font-size: calc(13.5px * var(--scale)); line-height: 1.55; margin-bottom: 0.5rem; }
+
+.card-tag { font-size: calc(12px * var(--scale)); font-weight: 700; color: var(--gov-navy); }
+
+.eval-body { display: grid; gap: 1.1rem; }
+.eval-intro { font-size: calc(13.5px * var(--scale)); color: var(--text-medium); line-height: 1.55; }
+
+.eval-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem; }
+.eval-stat .stat-value-gov { font-size: calc(26px * var(--scale)); }
+
+.eval-block {
+  background: var(--bg-header);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--gov-navy);
+  padding: 1.1rem 1.25rem;
+  border-radius: 4px;
+  min-width: 0;
+}
+.eval-block h3 { font-size: calc(15px * var(--scale)); font-weight: 800; color: var(--gov-navy); margin-bottom: 0.55rem; }
+.eval-block p, .eval-block li { font-size: calc(13px * var(--scale)); color: var(--text-medium); line-height: 1.55; }
+.eval-block ul { padding-left: 1.1rem; display: grid; gap: 0.3rem; }
+.eval-block-warn { border-left-color: var(--gov-saffron); background: #FFFBEB; }
+.eval-cols { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); column-gap: 1.5rem; }
+.eval-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.1rem; }
+
+.table-scroll { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 4px; margin-top: 0.4rem; background: var(--bg-card); }
+.table-gov th.num, .table-gov td.num { text-align: right; font-family: var(--font-mono); white-space: nowrap; }
+.table-gov tr.row-highlight td { background: var(--gov-gold-light) !important; font-weight: 700; }
+
+.note-muted { font-size: calc(12px * var(--scale)); color: var(--text-muted); line-height: 1.5; margin-top: 0.5rem; }
+
+.cm-pair { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+.cm-caption { font-size: calc(12.5px * var(--scale)); font-weight: 700; color: var(--text-medium); margin-bottom: 0.4rem; }
+.cm-grid { display: grid; grid-template-columns: auto minmax(90px, 1fr) minmax(90px, 1fr); gap: 4px; max-width: 360px; }
+.cm-head { font-size: calc(11px * var(--scale)); font-weight: 700; color: var(--text-muted); text-align: center; align-self: end; padding: 0.2rem; }
+.cm-side { text-align: right; align-self: center; padding-right: 0.5rem; }
+.cm-cell { padding: 0.7rem 0.5rem; text-align: center; font-family: var(--font-mono); font-weight: 800; font-size: calc(15px * var(--scale)); border-radius: 3px; }
+.cm-good { background: var(--status-real-bg); color: var(--status-real-text); border: 1px solid var(--status-real-border); }
+.cm-bad { background: var(--status-fake-bg); color: var(--status-fake-text); border: 1px solid var(--status-fake-border); }
+
+.module-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: calc(11.5px * var(--scale)); font-weight: 800; margin: 2px 4px 2px 0; }
+.chip-built { background: var(--status-real-bg); color: var(--status-real-text); border: 1px solid var(--status-real-border); }
+
+/* Result panel */
+.cert-title { font-size: calc(15px * var(--scale)); font-weight: 800; color: var(--gov-navy); }
+.cert-sub { font-size: calc(12px * var(--scale)); color: var(--text-muted); word-break: break-all; }
+.cert-note { padding: 0 1rem; }
+.verdict-subtitle { font-size: calc(12px * var(--scale)); color: var(--text-muted); }
+.ensemble-box { border-top: 1px solid var(--border-color); padding: 0.9rem 1rem 1rem; }
+.ensemble-title { font-size: calc(12px * var(--scale)); font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.4rem; }
+.member-sub { font-size: calc(11px * var(--scale)); color: var(--text-muted); font-weight: 500; }
+.metric-row-strong .metric-label-gov, .metric-row-strong .metric-val-gov { font-weight: 800; color: var(--gov-navy); }
+.contrib { display: inline-block; margin-left: 0.4rem; font-size: calc(11px * var(--scale)); font-weight: 700; }
+.toward-ai { color: var(--status-fake-text); }
+.toward-real { color: var(--status-real-text); }
+.cue-value { color: var(--gov-navy); font-family: var(--font-mono); }
+.tab-summary { font-size: calc(13px * var(--scale)); color: var(--text-muted); margin-bottom: 0.85rem; line-height: 1.5; }
+.sub-heading { font-size: calc(12px * var(--scale)); font-weight: 800; color: var(--text-muted); margin: 1.1rem 0 0.4rem; text-transform: uppercase; }
+.metric-val-wrap { font-size: calc(12.5px * var(--scale)); text-align: right; }
+
+/* Batch */
+.batch-title { font-size: calc(17px * var(--scale)); font-weight: 800; color: var(--gov-navy); }
+.stat-ai { color: var(--status-fake-text) !important; }
+.stat-real { color: var(--status-real-text) !important; }
+.btn-small { padding: 0.2rem 0.6rem; font-size: calc(12px * var(--scale)); }

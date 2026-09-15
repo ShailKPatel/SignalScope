@@ -1,4 +1,4 @@
-/* GIGW 3.0 & UIDAI / IRCTC Inspired Design System - Takniki Vibhag */
+/* GIGW 3.0 & UIDAI / IRCTC Inspired Design System - Takneeki Vibhag */
 
 :root {
   --gov-navy-dark: #071D33;
@@ -524,6 +524,17 @@ body {
   border-radius: 3px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   flex-shrink: 0;
+}
+
+.member-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gov-navy);
+  color: #FFFFFF;
+  font-size: calc(26px * var(--scale));
+  font-weight: 800;
+  letter-spacing: 0.06em;
 }
 
 .member-details-gov {
