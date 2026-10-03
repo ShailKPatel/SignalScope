@@ -1,5 +1,7 @@
 # SignalScope: Telling Real From Synthetic in the Age of Generative Media
 
+Team project with Rajvi Chauhan.
+
 > **SIH 2026 [Internal Hackathon] | Problem Statement 2 (C-433)**
 > **Domain:** AI / Media Forensics / Trust & Safety
 
